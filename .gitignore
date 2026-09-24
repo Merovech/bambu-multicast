@@ -1,0 +1,12 @@
+# Virtual environment
+venv
+
+# Test files
+**/__pycache__
+.pytest_cache
+
+# Personal scripts
+*.sh
+
+# Non-example configs
+config/config.json

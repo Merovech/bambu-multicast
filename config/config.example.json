@@ -1,0 +1,21 @@
+{
+  "web_server_port": 8090,
+  "poll_interval_ms": 5000,
+
+  "printers": {
+    "example": {
+      "label": "Living Room - My Printer",
+      "camera_url": "http://192.168.1.50:8081/stream",
+      "ip": "192.168.1.60",
+      "access_code": "12345678",
+      "serial": "01P00A000000000"
+    },
+    "example2": {
+      "label": "Living Room - My Other Printer",
+      "camera_url": "http://192.168.1.50:8082/stream",
+      "ip": "192.168.1.61",
+      "access_code": "12345678",
+      "serial": "01P00A000000000"
+    }
+  }
+}

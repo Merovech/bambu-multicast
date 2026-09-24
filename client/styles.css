@@ -1,0 +1,11 @@
+/*
+ * Custom CSS for the printer page.
+ *
+ * Intentionally near-empty: every visual need on this page (layout, colors,
+ * borders, the progress bar, transitions) turned out to be expressible with
+ * Tailwind utility classes directly in index.html, per "only create new
+ * classes when Tailwind can't handle the need." This file exists so there's
+ * an obvious place to add a rule if a future need comes up that Tailwind's
+ * utilities genuinely can't express (a custom animation, an odd gradient,
+ * etc.) -- add it here rather than reaching for an inline <style> block.
+ */
