@@ -20,9 +20,10 @@
       - [A. Camera-only page first](#a-camera-only-page-first)
       - [B. Add progress, layer, and ETA](#b-add-progress-layer-and-eta)
       - [C. Turn it into one systemd service](#c-turn-it-into-one-systemd-service)
-    - [Phase 6 — Cloudflare Tunnel: publish to ariroth.com/printers/](#phase-6--cloudflare-tunnel-publish-to-arirothcomprinters)
-    - [Phase 7 — Hardening / polish](#phase-7--hardening--polish)
-    - [Phase 8 — Tune once it's live (do later, with real traffic)](#phase-8--tune-once-its-live-do-later-with-real-traffic)
+  - [That's it!](#thats-it)
+  - [Help/Contact](#helpcontact)
+  - [A Note on AI](#a-note-on-ai)
+  - [Changelog](#changelog)
   - [Reference links](#reference-links)
 </details>
 
@@ -33,7 +34,7 @@ Multicast is largely intended for people who want to view this on a website with
 In fact, you can go through this guide and deploy without ever opening any file other than a few configs, and we will walk you through that.
 
 > [!IMPORTANT] 
-> This document covers installing BM on a Raspberry Pi.  However, any Linux-based machine will do.  Windows is currently not supported, though it may be in the future.
+> This document covers installing BM on a Raspberry Pi, and all commands assume the bash shell.  However, any Linux-based machine will do.  Windows is currently not supported, though it may be in the future.
 >
 > If you're of a more technical bent, I'm sure this could probably be installed on Windows using WSL, but I haven't tried it yet.
 
@@ -55,7 +56,7 @@ If you want to use a webcam pointed at your printer, then any webcam that can wo
   * 4GB is good for a 2-printer setup, but more RAM allows for more printers or higher-quality streams
 * A MicroSD card that will serve as the hard drive for the Pi ([Amazon](https://www.amazon.com/dp/B08L5HMJVW))
   * 32GB is recommended
-* (For external webcams) A webcam ([Amazon](https://www.amazon.com/)Logitech-C920x-Pro-HD-Webcam/dp/B085TFF7M1/)
+* (For external webcams) A webcam ([Amazon](https://www.amazon.com/Logitech-C920x-Pro-HD-Webcam/dp/B085TFF7M1/))
 * The ability to write to a Micro SD card
   * If your computer doesn't have a built-in jack, there are several adapter options out there: [MicroSD to SD](https://www.amazon.com/SanDisk-microSD-Memory-Adapter-MICROSD-ADAPTER/dp/B0047WZOOO), [SD/MicroSD to USB](https://www.amazon.com/acer-Adapter-MicroSD-Compatible-iPhone16/dp/B0DQ71G4G4)
 ###  <a name='Software'></a>Software
@@ -73,7 +74,7 @@ All other software is installed for free over the course of this guide.
 2. Enable **LAN Mode** on your printers.
 > [!IMPORTANT]
 > This will disconnect your printers from the cloud, meaning some features -- includng using the Bambu Handy app -- will no longer work.  Bambu Studio will, however.  For further details, see [here](https://wiki.bambulab.com/en/knowledge-sharing/enable-lan-mode).
-3. Write down or otherwise record each printer's **Access Code** and **IP Address**.  You will need these later. 
+3. Write down or otherwise record each printer's **Serial Number**, **Access Code**, and **IP Address**.  You will need these later. 
 4. (Optional) Set DHCP IP reservations for your printer on your network so that the IP addresses never change.
 
 > [!TIP]
@@ -358,295 +359,124 @@ Now we'll build the website itself.  The site is mostly built for you (unless yo
 
 ####  <a name='B.AddprogresslayerandETA'></a>B. Add progress, layer, and ETA
 
-The percentage, layer count, and remaining time all come from each printer's
-local status feed — a second connection (separate from the camera), using
-the same LAN access code, that Bambu printers expose for exactly this
-purpose. A small Python library (`bambulabs_api`) handles the details of
-that connection; you just call a few methods on it.
+The percentage, layer count, and remaining time all come from each printer's local status feed — a second connection (separate from the camera), using the same LAN access code, that Bambu printers expose for exactly this purpose. A small Python library (`bambulabs_api`) handles the details of that connection; you just call a few methods on it.
 
-- [x] **Find each printer's serial number** (a 15-character code, different
-      from the access code) — in the Bambu Handy app, open the printer, go to
-      **Settings → Firmware Version**; the serial (SN) is listed there. (It's
-      also on a sticker on the printer itself, and viewable via the printer's
-      own touchscreen "About" screen.) Note both serials alongside the
-      IPs/access codes you already have from Phase 0.
-
-- [x] **Create a Python virtual environment** for this script. Raspberry Pi
-      OS Bookworm blocks plain `pip install` system-wide by default (a Debian
-      safety measure) — a "virtual environment" is just a self-contained,
-      separate copy of Python for one project, which sidesteps that:
+> [!IMPORTANT]
+> If you already have the site set up, back up your files first, in case you don't like the changes an update brings.
+> 
+1. Download the latest release from github (TODO: LINK)
+2. Unzip the files to a location of your choice
+3. Copy `config/config.example.json` to `config.json` in the same location
       ```bash
-      cd ~/printer-page
-      python3 -m venv venv
-      source venv/bin/activate
-      pip install bambulabs-api
+      cp ./config/config.example.json ./config/config.json
       ```
-      Your prompt will show `(venv)` while it's active. You can `deactivate`
-      to leave it, but you don't need to — the systemd unit later will call
-      this venv's Python directly by its full path, without needing it
-      "activated."
+4. Modify `config/config.json` using `nano ./config/config.json`.  See the table below for the description fields and the changes needed for each.
+   | Field | Description |
+   | - | - |
+   | `web_server_port` | The port the sit will sit on. Change only if desired; the default is fine. |
+   | `poll_interval_ms` | How frequently the web page will update itself from the server.  This is in ms, so 5000 = 5 seconds.  Change to taste. |
+   | `printers` | The printers that will be streamed.  One entry per printer.  Add or remove as necessary. |
+   | `label` | A label for the printer, which will be displayed on the page.  Update as needed. |
+   | `camera_url` | The URL to the printer's camera that you set up earlier in this document. |
+   | `ip` | The printer's IP address.  Note that this s **not** the address of the server streaming the cameras, it is the printer itself. |
+   | `access_code` | The access code for the printer that you wrote down at the beginning of this process. |
+   | `serial` | The serial number of the printer that you wrote down earlier in this process. |
 
-- [x] **Create the status script** at `~/printer-page/status_server.py`.
-      The real, current source is `D:\src\printer-site\status_server.py`
-      (not this documentation folder — see the note at the top of part A),
-      with your real `PRINTERS` values (IP/access code/serial per printer)
-      already filled in. `./upload.sh` (part A) deploys it to the Pi
-      alongside the other three files.
+5. Make `setup.sh` in the root of the site folder executable and run it.
+   ```
+   chmod +x setup.sh
+   ./setup.sh
+   ```
 
-      What this does, in plain terms: one background
-      thread per printer reconnects and re-reads its status every 5 seconds,
-      storing the result in `latest_status`; the web server thread serves
-      the page's static files (per `STATIC_FILES`) and one dynamic
-      endpoint, `/status.json`, returning whatever the background threads
-      most recently saw. `status_lock` just prevents the web server from reading
-      `latest_status` at the exact instant a background thread is
-      mid-update — a minor safety detail, not something to worry about
-      further.
+   This will set up a virtual environment, run it, and install the bambulabs_api prerequisite.  Your prompt will now show `(venv)` before it.  You can type `deactivate` to exit the virtual environment, and `source venv/bin/activate` to come back.  However, you must be in the virtual environment when you run this manually.
 
-      **Unverified:** `printer.subtask_name()` / `printer.gcode_file()` for
-      the "Model" field are the closest-matching methods in the library's
-      docs, but I haven't confirmed what either actually returns on a real
-      print (a clean name like `Benchy`, a filename like
-      `Benchy_v2.3mf`, or something else). Check `status.json` once a print
-      is running and adjust if the value looks wrong — e.g. swap which one
-      is tried first, or strip a `.3mf`/`.gcode` extension if it's present.
 
-      **Bug found and fixed (2026-09-22):** the detail/error-row blocks
-      stayed hidden even once `status.json` had real data. Cause: they're
-      hidden in `index.html` by Tailwind's `hidden` **CSS class** (part of
-      `class="..."`), but `app.js` was toggling the native `hidden` HTML
-      **attribute** (`el.hidden = false`) — same word, two unrelated
-      mechanisms, and only the class was actually in effect. Fixed by adding
-      a `setHidden(el, hidden)` helper that does
-      `el.classList.toggle("hidden", hidden)` instead, used everywhere the
-      old code set `.hidden` directly. Worth remembering if any future markup
-      adds another Tailwind `hidden` class: toggle it via `classList`, not
-      the `.hidden` property.
 
-- [x] **Test it by hand**, with the venv still active from a step above (if
-      you closed that terminal, `cd ~/printer-page && source venv/bin/activate`
-      again first):
-      ```bash
-      python3 status_server.py
-      ```
-      From another machine, reload `http://<pi-ip>:8090/` — the "Loading…"
-      text should resolve to either a live percent/layer/ETA line (if a
-      print is running) or "Idle" (if not). You can also check the raw data
-      directly: `curl http://localhost:8090/status.json` should print JSON
-      for both printers. `Ctrl+C` to stop once confirmed.
+6. Test it by hand.  You must be in the virtual environment when you do this (see previous step).
+   ```bash
+   python3 server/server.py
+   ```
+   From another machine, reload `http://<pi-ip>:8090/` — the "Loading…" text should  show either a live percent/layer/ETA line if a print is running or "Idle" if not. You can also check the raw data directly: `curl http://localhost:8090/status.json` should print JSON for both printers. `Ctrl+C` to stop once confirmed.
 
 ####  <a name='C.Turnitintoonesystemdservice'></a>C. Turn it into one systemd service
 
-- [ ] **Create the systemd unit** at
-      `/etc/systemd/system/printer-page.service` — this replaces the plain
-      `http.server` command from part A with the new script, run using the
-      **venv's** Python (not the system one, since only the venv has
-      `bambulabs_api` installed):
-      ```ini
-      [Unit]
-      Description=Combined printer camera + status page
-      After=network.target
+1. Create a file at `/etc/systemd/sudo/printer-page.service`
+   ```
+   sudo touch /etc/systemd/system/printer-page.service
+   ```
 
-      [Service]
-      Type=simple
-      WorkingDirectory=/home/pi/printer-page
-      ExecStart=/home/pi/printer-page/venv/bin/python3 /home/pi/printer-page/status_server.py
-      Restart=always
-      RestartSec=2
-      User=pi
+2. Using nano (`sudo nano /etc/systemd/system/printer-page.service`), copy the text below into the file, then press CTRL+S to save and CTRL+Q to exit.
+   ```ini
+   [Unit]
+   Description=Combined printer camera + status page
+   After=network.target
 
-      [Install]
-      WantedBy=multi-user.target
-      ```
-      Replace `/home/pi/printer-page` (it appears twice) with the real path
-      if your username isn't `pi` — run `pwd` inside that folder to confirm.
-      Using the venv's own `python3` binary is what makes `import
-      bambulabs_api` work without needing that package installed
-      system-wide.
+   [Service]
+   Type=simple
+   WorkingDirectory=/home/pi/printer-page
+   ExecStart=/home/pi/printer-page/venv/bin/python3 /home/pi/printer-page/server/server.py
+   Restart=always
+   RestartSec=2
+   User=pi
 
-- [ ] **Load, start, and verify it:**
-      ```bash
-      sudo systemctl daemon-reload
-      sudo systemctl enable --now printer-page.service
-      systemctl status printer-page.service
-      journalctl -u printer-page.service -f
-      ```
-      Watch the logs for a moment for any Python errors (a typo'd IP/access
-      code/serial would show up here as a connection error from one of the
-      background threads).
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   Replace `/home/pi/printer-page` (it appears twice) with the real path if your username isn't `pi` — run `pwd` inside that folder to confirm.  Also change `printer-page` to whatever folder you unzipped the code into.
 
-- [ ] **Prove restart-on-failure and start-on-boot**, same drill as the other
-      two services:
-      ```bash
-      sudo systemctl kill -s SIGKILL printer-page.service
-      systemctl status printer-page.service
-      ```
-      then a real `sudo reboot`, then reload `http://<pi-ip>:8090/`.
+   Using the venv's own `python3` binary is what makes `import bambulabs_api` work without needing that package installed system-wide.
 
-- [ ] Load `http://<pi-ip>:8090` from your phone too (same Wi-Fi), to get an
-      early look at mobile behavior — including that the ETA should already
-      show in your phone's own local time, automatically, with no extra
-      work — before debugging any of this live on `ariroth.com` later.
+3. Load, start, and verify it.
+   ```bash
+   sudo systemctl daemon-reload
+   sudo systemctl enable --now printer-page.service
+   systemctl status printer-page.service
+   journalctl -u printer-page.service -f
+   ```
+   Watch the logs for a moment for any Python errors (a typo'd IP/access code/serial would show up here as a connection error from one of the background threads).
 
-###  <a name='Phase6CloudflareTunnel:publishtoariroth.comprinters'></a>Phase 6 — Cloudflare Tunnel: publish to ariroth.com/printers/
+   > [!NOTE]
+   > You probably will see some errors if everything goes well, specifically these two:
+   > * Printer Values Not Available Yet
+   > * Not connected to the MQTT server
+   >
+   > These are fine.  They come from the printers and they're noise.  You can safely ignore them.
 
-- [ ] Install `cloudflared` on the Pi
-      (`sudo apt install cloudflared`, or via Cloudflare's apt repo per their
-      current install docs — check `cloudflared --version` after).
-- [ ] `cloudflared tunnel login` (opens a browser flow to authorize against
-      your Cloudflare account/zone for ariroth.com).
-- [ ] `cloudflared tunnel create printers` — note the generated tunnel ID and
-      credentials file path.
-- [ ] Write `~/.cloudflared/config.yml`:
-  ```yaml
-  tunnel: printers
-  credentials-file: /home/<user>/.cloudflared/<tunnel-id>.json
+4. Prove restart-on-failure
+   ```bash
+   systemctl status printer-page.service # Note the PID it displays
+   sudo systemctl kill -s SIGKILL printer-page.service
+   systemctl status printer-page.service
+   ```
+   
+   You should see a different PID for the second call to `systemctl`.
 
-  ingress:
-    - hostname: ariroth.com
-      path: ^/printers/.*
-      service: http://localhost:8090   # or 8080/whatever your combined view listens on
-    - service: http_status:404
-  ```
-  - **Check first what currently lives at `ariroth.com` root.** If nothing is
-    hosted there yet, you can broaden this later to host a real homepage
-    elsewhere and let this rule carve out just `/printers/*`. If something
-    *is* already hosted there (e.g. via Cloudflare Pages, another tunnel, or
-    another server), this path-scoped rule leaves it alone — Cloudflare
-    checks the `path`-scoped rule first and only falls through if it doesn't
-    match.
-- [ ] `cloudflared tunnel route dns printers ariroth.com` (only needed if
-      `ariroth.com` doesn't already have a DNS record; if it does, e.g.
-      pointing elsewhere via Cloudflare, add/adjust the CNAME to the tunnel
-      manually in the Cloudflare DNS dashboard instead, so you don't disturb
-      existing records).
-- [ ] Install as a service so it survives reboots:
-      `sudo cloudflared service install`, then `sudo systemctl enable --now cloudflared`.
-- [ ] Confirm Cloudflare SSL/TLS mode for the zone is **Full** (or **Full
-      strict** if you later add a cert on the origin) — Universal SSL then
-      covers the public-facing HTTPS automatically, no Let's Encrypt/certbot
-      needed.
-- [ ] From a phone on cellular data (not your home Wi-Fi), load
-      `https://ariroth.com/printers/` and confirm both streams load over
-      HTTPS with no login prompt.
+5. Prove restart-on-reboot
+   ```
+   sudo reboot
+   ```
 
-###  <a name='Phase7Hardeningpolish'></a>Phase 7 — Hardening / polish
+   Wait a minute or two for the reboot, then reload `http://<pi-ip>:8090/`
 
-- [ ] Confirm the combined-view page is **read-only** — it's a static HTML
-      file with two `<img>` tags, so there's nothing on it that could send
-      G-code, pause/cancel, or otherwise control either printer (out of
-      scope, and also a good idea for a page with no login).
-- [ ] Set the Pi to auto-update security patches
-      (`sudo apt install unattended-upgrades`) since it's now internet-facing
-      via the tunnel.
-- [ ] Confirm all five services auto-start on boot and survive a full Pi
-      power-cycle test:
-      ```bash
-      systemctl is-enabled ustreamer-a1.service go2rtc.service printer-page.service cloudflared
-      ```
-      (Bambu Connect's two instances were installed by OctoEverywhere's own
-      installer, which sets up its own auto-start already — check those too
-      with whatever service name(s) the installer reported during Phase 2.)
-      Every line should print `enabled`; then do one more real `sudo reboot`
-      and confirm `https://ariroth.com/printers/` comes back on its own with
-      no manual intervention.
-- [ ] Bookmark `https://ariroth.com/printers/` and confirm it works cleanly on
-      mobile (Bambu Handy stays your control app; this is view-only).
-- [ ] Optional: add a short "last updated" or auto-refresh indicator to the
-      combined page so you can tell at a glance if a stream has silently
-      stalled.
+6. Enjoy!
 
-###  <a name='Phase8Tuneonceitslivedolaterwithrealtraffic'></a>Phase 8 — Tune once it's live (do later, with real traffic)
+## That's it!
+You're done!  You now should have a working site that streams your printers onto one page.  What you do with it from here is up to you.  Enjoy!
 
-Nothing here blocks going live. Come back to it after the page has been
-public for a while and you can see how the Pi behaves under real use.
+## Help/Contact
+If you run into any problems, please feel free to contact me on github (Merovech) or Reddit (u/pyran).  If you find bugs or have suggestions for new features, please consider filing an issue on Github.
 
-- [ ] **Soak test with everything running** — both streams open, both Bambu
-      Connect instances active, ideally mid-print (Bambu Connect's AI
-      failure detection also uses CPU). Check:
-      ```bash
-      vcgencmd measure_temp
-      vcgencmd get_throttled
-      uptime
-      ```
-      Temperature under ~75°C, `throttled=0x0`, and load average under 4
-      (the Pi 4 has 4 cores). Also watch ffmpeg in `top`: `%CPU` there is
-      per core, so 100% is one core out of four.
-- [ ] **Re-tune the P2S ffmpeg settings** in `/usr/local/etc/go2rtc.yaml` if
-      the soak test shows heat, throttling, or stutter. Current line:
-      `p2s: ffmpeg:p2s_raw#video=mjpeg#raw=-r 15 -vf scale=1080:-2`
-      - `scale=1080:-2` means 1080 pixels *wide* (height follows the aspect
-        ratio, so about 1080×608).
-      - The P2S's feed, measured with `ffprobe`, is **1920×1080 at 30 fps**
-        (about 62 million pixels/second). The current settings cut the
-        scale + JPEG-encode work to about 10 million pixels/second (~16%).
-      - Decoding the printer's H.264 feed always happens at the full
-        1920×1080 at 30 fps, before `-r` and `scale` apply, so those
-        settings can't reduce it. That's why ffmpeg stays around 90–100%
-        even after lowering both. Further cuts to `-r` or width only trim
-        the smaller remaining part.
-      - Levers, easiest first: lower `-r` (15 → 10 → 5), then a smaller
-        width (e.g. `scale=960:-2`).
-      - Restart go2rtc after each change: `sudo systemctl restart go2rtc.service`.
-- [ ] **Measure real bandwidth** once a few people are watching. MJPEG is
-      bandwidth-hungry (roughly several Mbps per stream per viewer), and it
-      multiplies by viewer count. With a 2 Gbps upload the internet link
-      isn't the limit. Check instead:
-      - Is the Pi on **wired gigabit Ethernet**? Wi-Fi may not sustain
-        multiple viewers.
-      - Does `cloudflared` CPU (visible in `top`) climb with viewer count?
-        It encrypts every byte leaving the Pi.
-- [ ] **Check Cloudflare's terms for video.** Cloudflare's self-serve terms
-      have historically restricted serving large amounts of non-HTML content
-      (video) through their proxy. Tunnels are treated differently from the
-      CDN, but read their current terms and be ready to switch approaches
-      (e.g. lower bitrate, or snapshot refresh instead of continuous video)
-      if they object to sustained heavy traffic.
-- [ ] **Decide how many viewers you're willing to support.** go2rtc shares one
-      ffmpeg between all viewers of the P2S, but ustreamer (A1) and the
-      printers themselves serve each viewer separately, and Bambu printers
-      handle only a few concurrent local video connections. If traffic
-      grows, consider an intermediate cache or a viewer limit.
-- [ ] **Lock the A1 webcam's focus** (the C920 hunts in and out of focus
-      while the bed moves, especially during calibration). Use your
-      `/dev/v4l/by-id/...-video-index0` path from Phase 3 in the commands
-      below.
-      - See the focus controls:
-        ```bash
-        v4l2-ctl -d /dev/v4l/by-id/<your-c920>-video-index0 --list-ctrls | grep -i focus
-        ```
-        You should see `focus_automatic_continuous` and `focus_absolute`
-        (range about 0–250).
-      - Turn autofocus off, *then* set a fixed focus. The order matters:
-        with autofocus still on, the manual value is ignored.
-        ```bash
-        v4l2-ctl -d /dev/v4l/by-id/<your-c920>-video-index0 --set-ctrl=focus_automatic_continuous=0
-        v4l2-ctl -d /dev/v4l/by-id/<your-c920>-video-index0 --set-ctrl=focus_absolute=30
-        ```
-        You can run these while ustreamer is streaming. Keep the stream
-        open in a browser and adjust the number until the build plate is
-        sharp. Higher values focus closer, lower values farther; values
-        move in steps of 5. `30` is only a starting guess.
-      - To make it stick across restarts, add these two lines to the
-        `[Service]` section of `ustreamer-a1.service`, above `ExecStart`,
-        then run `sudo systemctl daemon-reload && sudo systemctl restart ustreamer-a1.service`:
-        ```ini
-        ExecStartPre=/usr/bin/v4l2-ctl -d /dev/v4l/by-id/<your-c920>-video-index0 --set-ctrl=focus_automatic_continuous=0
-        ExecStartPre=/usr/bin/v4l2-ctl -d /dev/v4l/by-id/<your-c920>-video-index0 --set-ctrl=focus_absolute=30
-        ```
-      - Unverified: whether the C920 keeps these settings every time
-        ustreamer reopens the device. If autofocus comes back after a
-        restart or reboot, apply the setting after ustreamer starts instead
-        (for example with `ExecStartPost=`).
-      - Manual exposure and white balance are set the same way
-        (`--list-ctrls` shows the control names) if brightness shifts while
-        the bed moves.
-- [ ] **Optional: stop video when nobody is looking.** Have the page load the
-      streams only while the browser tab is visible (JavaScript
-      `document.visibilityState`), so background tabs don't keep ffmpeg and
-      the bandwidth running.
-- [ ] Note the final tuned values here for future reference:
-      P2S `-r` ___ / width ___; peak Pi temp ___; typical viewer count ___.
+## A Note on AI
+This project was designed, and developed with the assistance of Claude.  It was tested extensively, modified, cleaned up, and in many parts rewritten by me.  I have been a software developer for over 25 years, and I heavily supervised Claude's output for safety, cleanliness, and functionality.
+
+In other words, Claude saved me research time and coding time, but I reviewed the code before I was willing to trust it.
+
+I've also been running it both locally and on a domain for quite a while before I even thought of packaging it up and releasing it, and it's working great so far.
+
+## Changelog
+| Date | Change |
+| - | - |
+| 29 Sep 2026 | Initial draft completed. |
 
 ---
 
