@@ -11,3 +11,6 @@ venv
 
 # Non-example configs
 config/config.json
+
+# Others
+*.zip
