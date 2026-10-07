@@ -83,17 +83,22 @@ function renderCard({ id, label, cameraUrl }) {
 // needed to get a new card that's also kept up to date.
 let printerIds = [];
 
-// How long to wait before retrying a dead camera stream, in milliseconds.
-const CAMERA_RETRY_MS = 3000;
+// If a stream errors out outright (e.g. it 502s immediately), retry this
+// fast. This is just a fast path -- see CAMERA_WATCHDOG_MS below for why it
+// can't be the only mechanism.
+const CAMERA_ERROR_RETRY_MS = 3000;
 
-// Each camera <img> holds one long-lived MJPEG connection. If it drops for
-// any reason (network blip, printer camera hiccup, a Cloudflare Tunnel
-// connection reset overnight) the browser has no way to know the stream is
-// "over" on its own -- no more frames arrive, and the card's bg-black
-// (there so the spinner phase doesn't look broken) shows through as a
-// plain black box, indistinguishable from "no signal". This keeps retrying
-// forever so an overnight drop self-heals instead of needing a manual
-// page reload.
+// How often to force a brand-new connection regardless of whether an
+// "error" event ever fires. Essentially, the streams are somewhat fragile,
+// and a small network blip can kill it.  This will force the site to reconnect
+// on a fixed interval, which will reconnect to the stream if it was lost.
+const CAMERA_WATCHDOG_MS = 30000;
+
+function cacheBustedCameraUrl(baseUrl) {
+  // Ensure the browser doesn't cache the camera.
+  return `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}_retry=${Date.now()}`;
+}
+
 function startCameraStream(img, spinner) {
   const baseUrl = img.dataset.baseSrc;
   const hideSpinner = () => setHidden(spinner, true);
@@ -102,19 +107,19 @@ function startCameraStream(img, spinner) {
   img.addEventListener("error", () => {
     hideSpinner();
     setTimeout(() => {
-      // Cache-busted so the browser opens a fresh connection instead of
-      // re-requesting the same (dead) one.
-      img.src = `${baseUrl}${baseUrl.includes("?") ? "&" : "?"}_retry=${Date.now()}`;
-    }, CAMERA_RETRY_MS);
+      img.src = cacheBustedCameraUrl(baseUrl);
+    }, CAMERA_ERROR_RETRY_MS);
   });
+
+  setInterval(() => {
+    img.src = cacheBustedCameraUrl(baseUrl);
+  }, CAMERA_WATCHDOG_MS);
 }
 
 async function loadConfig() {
   // Deliberately relative (no leading "/"): this page can be loaded either
   // at the site root (local testing) or under /printers/ (via the
-  // Cloudflare Tunnel ingress rule). A leading "/" would resolve against
-  // the domain root regardless of where the page itself lives, breaking
-  // the /printers/ case -- see printer-streaming-punchlist.md Phase 7.
+  // Cloudflare Tunnel ingress rule).
   const res = await fetch("config.json", { cache: "no-store" });
   const config = await res.json();
   const container = document.getElementById("printers");
@@ -123,9 +128,7 @@ async function loadConfig() {
     pollIntervalMs = config.settings.poll_interval_ms;
   }
 
-  // Page-wide, set-once value -- unlike the per-printer fields below, this
-  // isn't inside any card, so it's looked up against the whole document
-  // rather than through setField()'s card-scoped querySelector.
+  // Page-wide, set-once value.  Not tied to any printer.
   const pollIntervalEl = document.querySelector('[data-field="pollIntervalMs"]');
   if (pollIntervalEl) {
     pollIntervalEl.textContent = pollIntervalMs;
@@ -139,11 +142,7 @@ async function loadConfig() {
 
   // Hide each camera's spinner once its first frame actually arrives (or
   // once it's clear the stream failed, so it doesn't spin forever), and
-  // keep the stream alive if it ever dies later. MJPEG <img> tags fire
-  // "load" on the first frame, not when the stream "finishes" -- it never
-  // does -- so this is the right signal to use. go2rtc (P2S) takes
-  // noticeably longer than ustreamer (A1) to deliver a first frame, hence
-  // the spinner mattering more for one than the other.
+  // keep the stream alive if it ever dies later.
   for (const id of printerIds) {
     const card = document.querySelector(`[data-printer="${id}"]`);
     const img = card.querySelector('[data-role="camera-img"]');
@@ -152,11 +151,7 @@ async function loadConfig() {
   }
 }
 
-// index.html hides detail/error-row with Tailwind's `hidden` CSS class (in
-// their class="..." list), not the native `hidden` HTML attribute -- the two
-// share a name but are unrelated mechanisms. Toggling the attribute (e.g.
-// `el.hidden = false`) does nothing when the class is what's actually
-// applying `display: none`, so visibility here has to go through the class.
+// Tailwind CSS hides elements via class name, not via HTML "hidden attribute"
 function setHidden(el, hidden) {
   el.classList.toggle("hidden", hidden);
 }
@@ -177,7 +172,7 @@ function updateCard(id, info) {
   // gcode status, show the idle display.  If it's in Running mode, show the
   // cards.  Printer status (Printing, Homing toolhead, Heating bed, etc.) are
   // for display only -- it's the gcode Idle/Running/Unknown statuses that are
-  // the important parts.
+  // the important parts for determining which view to show.
   const isIdle = !info || info.state === "IDLE" || info.state === "UNKNOWN";
 
   setHidden(idleEl, !isIdle);
@@ -192,10 +187,8 @@ function updateCard(id, info) {
   setField(card, "total_layers", info.total_layers ?? 0);
   setField(card, "remaining", formatDuration(info.remaining_seconds));
   setField(card, "pstate", info.pstate);
-  // new Date(...) + toLocaleString() convert the server's UTC timestamp into
-  // whatever timezone the VIEWER's own browser is set to. dateStyle+timeStyle
-  // always include the date (so "tomorrow" or "next week" stay unambiguous)
-  // but drop seconds from the time (just h:mm AM/PM).
+  
+  // Show time in the users's current time zone
   const etaText = info.eta_utc
     ? new Date(info.eta_utc).toLocaleString([], { dateStyle: "short", timeStyle: "short" })
     : "—";
