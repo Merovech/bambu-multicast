@@ -1,3 +1,3 @@
 tests/ export-ignore
 .gitattributes export-ignore
-.gitignore export-gnore
+.gitignore export-ignore
