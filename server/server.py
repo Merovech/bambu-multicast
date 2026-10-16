@@ -162,6 +162,10 @@ class Handler(BaseHTTPRequestHandler):
     server_version = "printer-site"
     sys_version = ""
 
+    def _send_security_headers(self):
+        for name, value in SECURITY_HEADERS.items():
+            self.send_header(name, value)
+
     def _send_headers(self, content_type):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
@@ -172,8 +176,7 @@ class Handler(BaseHTTPRequestHandler):
         # why. `no-cache` still allows caching, but forces a revalidation with the origin before ever
         # reusing a cached copy.
         self.send_header("Cache-Control", "no-cache")
-        for name, value in SECURITY_HEADERS.items():
-            self.send_header(name, value)
+        self._send_security_headers()
         self.end_headers()
 
     def do_GET(self):
@@ -184,6 +187,7 @@ class Handler(BaseHTTPRequestHandler):
             # to avoid breaking relative URLs.
             self.send_response(301)
             self.send_header("Location", "/printers/")
+            self._send_security_headers()
             self.end_headers()
             return
         if path.startswith("/printers/"):
@@ -216,6 +220,12 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write((CLIENT_ROOT / filename).read_bytes())
         else:
             self.send_response(404)
+            # Never let a "not found" be cached.  Without this header Cloudflare adds its own: it
+            # tells browsers to keep the 404 for 4 hours and holds it at its edge too.  So a file that
+            # is briefly missing (say, a new page uploaded before the old server was restarted) stays
+            # broken for hours after it has been fixed.
+            self.send_header("Cache-Control", "no-store")
+            self._send_security_headers()
             self.end_headers()
 
     def log_message(self, format, *args):

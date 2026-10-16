@@ -190,3 +190,28 @@ class TestSecurityHeaders:
 
     def test_the_server_does_not_announce_its_python_version(self, get):
         assert "Python" not in get("/")[1].get("Server", "")
+
+
+class TestNotFoundIsNeverCached:
+    # Cloudflare caches a 404 that has no Cache-Control (browsers for 4 hours, its own edge for a few
+    # minutes), so a file that was missing for a moment stayed broken long after it was fixed.
+    @pytest.mark.parametrize("path", ["/nope", "/tailwind.js", "/printers/missing.css", "/server.py",
+                                      "/config/config.json", "/nope?x=1"])
+    def test_a_404_says_not_to_cache_it(self, get, path):
+        status, headers, _ = get(path)
+        assert status == 404
+        assert headers["Cache-Control"] == "no-store"
+
+    def test_a_404_still_carries_the_security_headers(self, get):
+        headers = get("/nope")[1]
+        assert headers["X-Content-Type-Options"] == "nosniff"
+        assert "default-src 'self'" in headers["Content-Security-Policy"]
+
+    def test_the_redirect_carries_the_security_headers_too(self, get):
+        status, headers, _ = get("/printers")
+        assert status == 301
+        assert headers["X-Content-Type-Options"] == "nosniff"
+        assert "default-src 'self'" in headers["Content-Security-Policy"]
+
+    def test_found_files_are_still_revalidated_not_forbidden_from_caching(self, get):
+        assert get("/app.js")[1]["Cache-Control"] == "no-cache"
