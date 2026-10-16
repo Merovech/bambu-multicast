@@ -8,6 +8,7 @@ venv
 # Personal scripts
 *.sh
 !setup.sh
+!setup-dev.sh
 
 # Non-example configs
 config/config.json

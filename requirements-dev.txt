@@ -1,2 +1,5 @@
+# Everything a developer needs: the site's own packages, plus the testing tools.
+# Installed by setup-dev.sh, or by hand with:  pip install -r requirements-dev.txt
+-r requirements.txt
 pytest
 pytest-benchmark

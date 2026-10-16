@@ -138,6 +138,16 @@ def get(http_port):
 # Lines that performance tests want shown after the run, whether or not they pass.
 PERF_LINES = []
 
+# The micro-benchmarks need the pytest-benchmark plugin, which is only needed for performance
+# testing.  Without it, pytest would report an error ("fixture 'benchmark' not found"); this stand-in
+# turns that into a skip that says what to do.  When the plugin is installed it provides the real one.
+try:
+    import pytest_benchmark  # noqa: F401
+except ImportError:
+    @pytest.fixture
+    def benchmark():
+        pytest.skip("pytest-benchmark isn't installed; run: pip install -r requirements-dev.txt")
+
 
 @pytest.fixture
 def report():

@@ -5,8 +5,9 @@ Not part of a normal `pytest` run (see pytest.ini).  Run them on demand with:
     pytest -m perf
 
 Results are printed in a "performance results" section at the end, plus pytest-benchmark's own table
-for the micro-benchmarks.  Run them on the Raspberry Pi too (pip install pytest pytest-benchmark in
-its venv): the Pi is the machine that matters, and it is several times slower than a desktop.
+for the micro-benchmarks.  They need `pip install -r requirements-dev.txt` (pytest-benchmark); without
+it the micro-benchmarks are skipped and the rest still run.  Run them on the Raspberry Pi too, in its
+venv: the Pi is the machine that matters, and it is several times slower than a desktop.
 
 The pass/fail limits are deliberately loose -- 10x or more headroom over what a desktop measures --
 so they only trip on a real regression (something accidentally quadratic, a lock held too long), never

@@ -17,7 +17,7 @@ def test_known_code_is_translated_to_text():
 
 
 def test_unknown_code_falls_back_to_a_lookup_friendly_code():
-    assert describe_print_error(0x0DEADBEE) == "Printer error 0DEA-DBEE"
+    assert describe_print_error(0x0DEADBEE) == "Printer error 0DEA-DBEE (Unknown error)"
 
 
 def test_leading_zeros_are_preserved_in_lookup():

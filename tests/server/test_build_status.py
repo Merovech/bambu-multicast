@@ -128,7 +128,7 @@ class TestPrintError:
 
     def test_unknown_error_code_still_produces_something_to_search_for(self, status, printer_class):
         info = status(running(printer_class, print_error=0x0DEADBEE))
-        assert info["error"] == "Printer error 0DEA-DBEE"
+        assert info["error"] == "Printer error 0DEA-DBEE (Unknown error)"
 
     def test_no_error_means_no_error_key(self, status, printer_class):
         assert "error" not in status(running(printer_class, print_error=0))
