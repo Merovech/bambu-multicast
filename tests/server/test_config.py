@@ -26,7 +26,9 @@ sys.path.insert(0, str(SERVER_DIR))
 from config import (  # noqa: E402
     DEFAULT_PORT,
     DEFAULT_POLL_INTERVAL_MS,
+    DEFAULT_BIND_ADDRESS,
     DEFAULT_RECENT_RESULT_WINDOW_MINUTES,
+    load_bind_address,
     load_config,
 )
 
@@ -189,3 +191,71 @@ class TestRecentResultWindow:
         data = json.loads(example.read_text(encoding="utf-8"))
         assert data["recent_result_window_minutes"] == DEFAULT_RECENT_RESULT_WINDOW_MINUTES
         assert load_config(example)[2] == DEFAULT_RECENT_RESULT_WINDOW_MINUTES
+
+
+class TestPortAndPollInterval:
+    @pytest.mark.parametrize("key, value", [
+        ("web_server_port", "8090"), ("web_server_port", 0), ("web_server_port", 70000),
+        ("web_server_port", True), ("web_server_port", 80.5),
+        ("poll_interval_ms", "5000"), ("poll_interval_ms", 0), ("poll_interval_ms", -5),
+        ("poll_interval_ms", False), ("poll_interval_ms", None),
+    ])
+    def test_nonsense_is_rejected_at_startup(self, tmp_path, key, value):
+        path = write_config(tmp_path, {key: value, "printers": SAMPLE_PRINTERS})
+        with pytest.raises(SystemExit) as exc_info:
+            load_config(path)
+        assert key in str(exc_info.value)
+
+
+class TestPrinterEntries:
+    def load(self, tmp_path, printers):
+        return load_config(write_config(tmp_path, {"printers": printers}))
+
+    @pytest.mark.parametrize("field", ["label", "camera_url", "ip", "access_code", "serial"])
+    def test_each_required_field_must_be_present(self, tmp_path, field):
+        printer = {k: v for k, v in SAMPLE_PRINTERS["a1"].items() if k != field}
+        with pytest.raises(SystemExit) as exc_info:
+            self.load(tmp_path, {"a1": printer})
+        assert field in str(exc_info.value) and "a1" in str(exc_info.value)
+
+    @pytest.mark.parametrize("value", [123, None, "", "   ", ["x"]])
+    def test_fields_must_be_non_empty_text(self, tmp_path, value):
+        with pytest.raises(SystemExit):
+            self.load(tmp_path, {"a1": {**SAMPLE_PRINTERS["a1"], "label": value}})
+
+    @pytest.mark.parametrize("printers", [["a1"], "a1", {"a1": "oops"}, {"a1": None}])
+    def test_the_printers_section_must_be_named_objects(self, tmp_path, printers):
+        with pytest.raises(SystemExit):
+            self.load(tmp_path, printers)
+
+    @pytest.mark.parametrize("url", ["javascript:alert(1)", "data:text/html,x", "ftp://x/y", "cam/stream"])
+    def test_camera_url_must_be_a_web_address(self, tmp_path, url):
+        with pytest.raises(SystemExit) as exc_info:
+            self.load(tmp_path, {"a1": {**SAMPLE_PRINTERS["a1"], "camera_url": url}})
+        assert "camera_url" in str(exc_info.value)
+
+    @pytest.mark.parametrize("url", ["http://192.168.1.50:8081/stream", "https://x.test/s", "/camera/p1"])
+    def test_web_and_site_relative_camera_urls_are_accepted(self, tmp_path, url):
+        self.load(tmp_path, {"a1": {**SAMPLE_PRINTERS["a1"], "camera_url": url}})
+
+    def test_the_example_config_is_valid(self):
+        example = Path(__file__).resolve().parent.parent.parent / "config" / "config.example.json"
+        load_config(example)
+        load_bind_address(example)
+
+
+class TestBindAddress:
+    def test_defaults_when_not_given(self, tmp_path):
+        path = write_config(tmp_path, {"printers": SAMPLE_PRINTERS})
+        assert load_bind_address(path) == DEFAULT_BIND_ADDRESS
+
+    def test_config_value_is_used(self, tmp_path):
+        path = write_config(tmp_path, {"bind_address": "127.0.0.1", "printers": SAMPLE_PRINTERS})
+        assert load_bind_address(path) == "127.0.0.1"
+
+    @pytest.mark.parametrize("value", ["", 5, None, True])
+    def test_nonsense_is_rejected(self, tmp_path, value):
+        path = write_config(tmp_path, {"bind_address": value, "printers": SAMPLE_PRINTERS})
+        with pytest.raises(SystemExit) as exc_info:
+            load_bind_address(path)
+        assert "bind_address" in str(exc_info.value)

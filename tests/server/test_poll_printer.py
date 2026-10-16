@@ -4,6 +4,7 @@ The loop never returns, so each test replaces time.sleep with something that let
 iterations run and then raises Stop to break out.
 """
 
+import json
 import pytest
 
 
@@ -123,8 +124,25 @@ def test_a_failed_connection_is_reported_and_retried(server, run_loop, monkeypat
 
     monkeypatch.setattr(server.bl, "Printer", Unreachable)
     run_loop(3)
-    assert server.latest_status["p1"] == {"state": "ERROR", "error": "printer is off"}
+    assert server.latest_status["p1"] == {"state": "ERROR", "error": server.POLL_FAILURE_MESSAGE}
     assert len(attempts) == 3
+
+
+def test_the_browser_never_sees_the_real_exception_text(server, run_loop, monkeypatch, caplog):
+    # Exception text can include the printer's LAN address; it belongs in the log only.
+    class Unreachable:
+        def __init__(self, *args):
+            pass
+
+        def connect(self):
+            raise OSError("cannot reach 10.99.99.1:8883")
+
+    monkeypatch.setattr(server.bl, "Printer", Unreachable)
+    with caplog.at_level("WARNING"):
+        run_loop(3)
+    assert "10.99.99.1" not in json.dumps(server.latest_status)
+    logged = [r.getMessage() for r in caplog.records if "polling failed" in r.getMessage()]
+    assert len(logged) == 1 and "10.99.99.1" in logged[0]
 
 
 def test_a_dropped_connection_triggers_a_fresh_reconnect(server, run_loop, monkeypatch):

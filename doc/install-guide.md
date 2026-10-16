@@ -386,9 +386,10 @@ Now we'll build the website itself.  The site is mostly built for you (unless yo
    | `web_server_port`  | The port the sit will sit on. Change only if desired; the default is fine.                                                     |
    | `poll_interval_ms` | How frequently the web page will update itself from the server.  This is in milliseconds, so 5000 = 5 seconds.  Change to taste. |
    | `recent_result_window_minutes` | After a print ends, how many minutes the page keeps saying "Idle (Print Succeeded)" or "Idle (Print Failed)" before going back to plain "Idle".  Optional; the default is 30.  Use `0` to turn the message off. |
+   | `bind_address` | Optional; the default is `0.0.0.0`, which lets anything on your network connect directly.  If Cloudflare Tunnel (`cloudflared`) runs on the same machine as the site, set this to `127.0.0.1` so only the tunnel can reach it.  (With `127.0.0.1`, the "reload `http://<pi-ip>:8090/`" test below only works from the Pi itself.) |
    | `printers`         | The printers that will be streamed.  One entry per printer.  Add or remove as necessary.                                       |
    | `label`            | A label for the printer, which will be displayed on the page.  Customize it as you want. |
-   | `camera_url`       | The URL to the printer's camera that you set up earlier in this document.|
+   | `camera_url`       | The URL to the printer's camera that you set up earlier in this document.  Must start with `http://` or `https://`.|
    | `ip`               | The printer's IP address.  Note that this is **not** the address of the server streaming the cameras, it is the printer itself. |
    | `access_code`      | The access code for the printer that you wrote down at the beginning of this process. |
    | `serial`           | The serial number of the printer that you wrote down earlier in this process. |

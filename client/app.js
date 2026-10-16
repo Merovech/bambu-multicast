@@ -27,10 +27,34 @@ function setField(card, name, value) {
     el.textContent = value;}
 }
 
+// Config values end up inside HTML, so anything that isn't plain text has to be neutralized first.
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Only web addresses (absolute, or relative to this site) may be used as a camera image.
+// Anything else, such as a javascript: or data: URL, becomes empty.
+function safeCameraUrl(url) {
+  try {
+    const parsed = new URL(url, window.location.href);
+    return parsed.protocol === "http:" || parsed.protocol === "https:" ? String(url) : "";
+  } catch (e) {
+    return "";
+  }
+}
+
 // Block of HTML that gets rendered.  If you want to tweak the cards to taste,
 // this is where you do it.  This prevents us from having to copy and paste
 // cards when you have many streams, as well as maintain any changes across them.
-function renderCard({ id, label, cameraUrl }) {
+function renderCard({ id: rawId, label: rawLabel, cameraUrl: rawCameraUrl }) {
+  const id = escapeHtml(rawId);
+  const label = escapeHtml(rawLabel);
+  const cameraUrl = escapeHtml(safeCameraUrl(rawCameraUrl));
   return `
     <div class="flex-1 basis-[480px] max-w-[640px]" data-printer="${id}">
       <h2 class="my-2 text-center text-lg font-normal">${label}</h2>
@@ -58,7 +82,7 @@ function renderCard({ id, label, cameraUrl }) {
         </div>
 
         <div class="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-neutral-700">
-          <div class="h-full rounded-full bg-[#4caf50] transition-all duration-1000" data-role="bar" style="width: 0%"></div>
+          <div class="h-full w-0 rounded-full bg-[#4caf50] transition-all duration-1000" data-role="bar"></div>
         </div>
 
         <div class="mt-2 flex items-center justify-between text-neutral-300">
@@ -254,6 +278,8 @@ if (typeof module !== "undefined" && module.exports) {
     formatDuration,
     setField,
     renderCard,
+    escapeHtml,
+    safeCameraUrl,
     setHidden,
     updateCard,
     startCameraStream,

@@ -8,3 +8,5 @@ requirements-dev.txt export-ignore
 doc/future-to-do-list.md export-ignore
 *.sh text eol=lf
 setup-dev.sh export-ignore
+tailwind.config.js export-ignore
+tailwind.input.css export-ignore

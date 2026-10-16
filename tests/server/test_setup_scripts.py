@@ -33,7 +33,8 @@ def packages_setup_sh_installs():
     for line in read("setup.sh").splitlines():
         match = re.search(r"pip install (.+)", line.split("#")[0])
         if match:
-            names += [t.lower().replace("_", "-") for t in match.group(1).split() if not t.startswith("-")]
+            names += [re.split(r"[<>=!~\[;]", t)[0].lower().replace("_", "-")
+                      for t in match.group(1).split() if not t.startswith("-")]
     return names
 
 
@@ -98,3 +99,20 @@ class TestScriptsAreUsable:
         stdlib = {"json", "logging", "threading", "time", "datetime", "http", "pathlib", "sys", "os"}
         third_party = {name.lower().replace("_", "-") for name in imported - local - stdlib}
         assert third_party <= set(package_names(read("requirements.txt")))
+
+
+class TestSupplyChain:
+    def test_production_packages_are_pinned_to_an_exact_version(self):
+        for line in read("requirements.txt").splitlines():
+            line = line.split("#")[0].strip()
+            if line:
+                assert re.search(r"==\d", line), f"{line} is not pinned with =="
+
+    def test_setup_sh_pins_the_same_versions_as_requirements_txt(self):
+        pinned = set(re.findall(r"[\w.-]+==[\w.]+", read("requirements.txt")))
+        assert pinned and pinned <= set(re.findall(r"[\w.-]+==[\w.]+", read("setup.sh")))
+
+    def test_setup_sh_starts_with_a_real_shebang_and_stops_on_errors(self):
+        text = read("setup.sh")
+        assert text.startswith("#!/bin/bash")
+        assert "set -euo pipefail" in text

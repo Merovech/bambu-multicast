@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from config import PROJECT_ROOT, load_config
+from config import PROJECT_ROOT, load_bind_address, load_config
 from print_errors import describe_print_error
 from print_result import PrintResultTracker
 from printer_status_map import PRINTER_STATUS_MAP
@@ -23,6 +23,7 @@ CLIENT_ROOT = PROJECT_ROOT / "client"
 # via /config.json); "ip", "access_code", and "serial" are not, and never leave this script -- 
 # they're only used server-side to poll the printer's local status feed.
 PORT, POLL_INTERVAL_MS, RECENT_RESULT_WINDOW_MINUTES, PRINTERS = load_config()
+BIND_ADDRESS = load_bind_address()
 
 # Settings that apply to the whole site rather than one printer. Everything
 # in here is sent to the browser via /config.json.
@@ -33,6 +34,11 @@ SETTINGS = {
 status_lock = threading.Lock()
 latest_status = {name: {"state": "UNKNOWN"} for name in PRINTERS}
 last_error = {}  # per printer, so a changed error code is logged once rather than every poll
+last_poll_failure = {}  # per printer, so a repeating connection failure is logged once, not every poll
+
+# What the browser is told when a printer can't be polled.  The real exception text can contain the
+# printer's LAN IP address and other internals, so it goes to the log, never to the browser.
+POLL_FAILURE_MESSAGE = "Unable to reach printer"
 
 class _IgnoreAmsNoise(logging.Filter):
     def filter(self, record):
@@ -98,8 +104,12 @@ def poll_printer(name, cfg):
                 printer = bl.Printer(cfg["ip"], cfg["access_code"], cfg["serial"])
                 printer.connect()
             info = build_status(printer, name, result_tracker)
+            last_poll_failure.pop(name, None)
         except Exception as e:
-            info = {"state": "ERROR", "error": str(e)}
+            if last_poll_failure.get(name) != str(e):
+                logging.warning("%s: polling failed: %s: %s", name, type(e).__name__, e)
+            last_poll_failure[name] = str(e)
+            info = {"state": "ERROR", "error": POLL_FAILURE_MESSAGE}
             printer = None  # force a fresh reconnect attempt next loop
 
         with status_lock:
@@ -122,6 +132,7 @@ STATIC_FILES = {
     "/index.html": ("index.html", "text/html"),
     "/app.js": ("app.js", "application/javascript"),
     "/styles.css": ("styles.css", "text/css"),
+    "/tailwind.css": ("tailwind.css", "text/css"),
 }
 
 
@@ -134,7 +145,23 @@ class WebServer(ThreadingHTTPServer):
     request_queue_size = 128
 
 
+# Sent with every response.  The page only loads its own script and styles, talks only to this
+# server, and shows camera images from any http(s) address (the camera streams live on other ports).
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "Content-Security-Policy": (
+        "default-src 'self'; img-src 'self' http: https:; "
+        "frame-ancestors 'none'; base-uri 'none'; form-action 'none'"
+    ),
+}
+
+
 class Handler(BaseHTTPRequestHandler):
+    # Don't announce "BaseHTTP/0.6 Python/3.x" on every response and error page.
+    server_version = "printer-site"
+    sys_version = ""
+
     def _send_headers(self, content_type):
         self.send_response(200)
         self.send_header("Content-Type", content_type)
@@ -145,6 +172,8 @@ class Handler(BaseHTTPRequestHandler):
         # why. `no-cache` still allows caching, but forces a revalidation with the origin before ever
         # reusing a cached copy.
         self.send_header("Cache-Control", "no-cache")
+        for name, value in SECURITY_HEADERS.items():
+            self.send_header(name, value)
         self.end_headers()
 
     def do_GET(self):
@@ -197,4 +226,4 @@ if __name__ == "__main__":
     for name, cfg in PRINTERS.items():
         threading.Thread(target=poll_printer, args=(name, cfg), daemon=True).start()
 
-    WebServer(("0.0.0.0", PORT), Handler).serve_forever()
+    WebServer((BIND_ADDRESS, PORT), Handler).serve_forever()

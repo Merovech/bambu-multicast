@@ -175,3 +175,18 @@ class TestConnectionQueue:
         import socketserver
         assert issubclass(server.WebServer, socketserver.ThreadingMixIn)
         assert server.WebServer.daemon_threads is True
+
+
+class TestSecurityHeaders:
+    @pytest.mark.parametrize("path", ["/", "/app.js", "/styles.css", "/tailwind.css", "/status.json", "/config.json"])
+    def test_every_response_carries_the_security_headers(self, get, path):
+        headers = get(path)[1]
+        assert headers["X-Content-Type-Options"] == "nosniff"
+        assert headers["Referrer-Policy"] == "no-referrer"
+        csp = headers["Content-Security-Policy"]
+        assert "default-src 'self'" in csp
+        assert "frame-ancestors 'none'" in csp
+        assert "unsafe-inline" not in csp and "unsafe-eval" not in csp
+
+    def test_the_server_does_not_announce_its_python_version(self, get):
+        assert "Python" not in get("/")[1].get("Server", "")

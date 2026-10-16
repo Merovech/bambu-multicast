@@ -238,6 +238,37 @@ describe("renderCard", () => {
     }
   );
 
+  test("treats label and id as text, never as markup", () => {
+    const html = render({ id: 'p"><img src=x onerror=alert(1)>', label: "<script>alert(1)</script>" });
+    expect(html.querySelector("script")).toBeNull();
+    expect(html.querySelectorAll("img")).toHaveLength(1);
+    expect(html.querySelector("h2").textContent).toBe("<script>alert(1)</script>");
+    expect(html.querySelector("[onerror]")).toBeNull();
+  });
+
+  test("cannot be broken out of via the camera URL", () => {
+    const html = render({ cameraUrl: 'https://cam.test/s" onerror="alert(1)' });
+    expect(html.querySelector("[onerror]")).toBeNull();
+  });
+
+  test.each(["javascript:alert(1)", "data:text/html,<b>x</b>", "vbscript:x", "file:///etc/passwd"])(
+    "refuses to load %s as a camera",
+    (cameraUrl) => {
+      expect(render({ cameraUrl }).querySelector("img").getAttribute("src")).toBe("");
+    }
+  );
+
+  test.each(["http://cam.test/stream", "https://cam.test:8081/stream?x=1", "/camera/p1"])(
+    "allows %s as a camera",
+    (cameraUrl) => {
+      expect(render({ cameraUrl }).querySelector("img").getAttribute("src")).toBe(cameraUrl);
+    }
+  );
+
+  test("has no inline style, so the page's content-security-policy can forbid them", () => {
+    expect(render().querySelector("[style]")).toBeNull();
+  });
+
   test("has the progress bar", () => {
     expect(render().querySelector('[data-role="bar"]')).not.toBeNull();
   });
