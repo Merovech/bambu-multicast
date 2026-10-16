@@ -1,0 +1,23 @@
+{
+  "name": "bambu-multicast-tests",
+  "private": true,
+  "description": "Dev-only test tooling. Nothing here is needed to run the site.",
+  "scripts": {
+    "test": "jest",
+    "test:perf": "jest --testPathIgnorePatterns=/node_modules/ --testPathPatterns=perf"
+  },
+  "jest": {
+    "testEnvironment": "jsdom",
+    "roots": [
+      "<rootDir>/tests/client"
+    ],
+    "testPathIgnorePatterns": [
+      "/node_modules/",
+      "perf\\.test\\.js$"
+    ]
+  },
+  "devDependencies": {
+    "jest": "^30.0.0",
+    "jest-environment-jsdom": "^30.0.0"
+  }
+}

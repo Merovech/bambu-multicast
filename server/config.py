@@ -9,8 +9,12 @@ package installed or a real printer available.
 import json
 from pathlib import Path
 
+# The default for what port to run this site on
 DEFAULT_PORT = 8090
+# The default for how often to poll the backend for updates, in milliseconds
 DEFAULT_POLL_INTERVAL_MS = 5000
+# The default for ow long after a print ends the page keeps saying whether it succeeded or failed.
+DEFAULT_RECENT_RESULT_WINDOW_MINUTES = 30
 
 # This file lives in server/; config/ is a sibling folder one level up, at
 # the project root.
@@ -21,8 +25,8 @@ CONFIG_PATH = PROJECT_ROOT / "config" / "config.json"
 def load_config(config_path=CONFIG_PATH):
     """Read and validate a config JSON file.
 
-    Returns (web_server_port, poll_interval_ms, printers). Missing optional
-    settings fall back to DEFAULT_PORT/DEFAULT_POLL_INTERVAL_MS. Raises
+    Returns (web_server_port, poll_interval_ms, recent_result_window_minutes,
+    printers). Missing optional settings fall back to the DEFAULT_* values. Raises
     SystemExit with a plain-language message (not just a bare exception) if
     the file is missing, isn't valid JSON, or lists no printers -- this is
     meant to be read by someone setting up the site, not just logged.
@@ -47,8 +51,18 @@ def load_config(config_path=CONFIG_PATH):
     if "printers" not in data or not data["printers"]:
         raise SystemExit(f"{config_path} has no printers listed under \"printers\".")
 
+    window = data.get("recent_result_window_minutes", DEFAULT_RECENT_RESULT_WINDOW_MINUTES)
+    # bool is a number to Python (True == 1), but "true" is never what someone meant here.
+    if isinstance(window, bool) or not isinstance(window, (int, float)) or window < 0:
+        raise SystemExit(
+            f"{config_path} has an invalid \"recent_result_window_minutes\": {window!r}.\n"
+            "It must be a number of minutes, such as 30 (or 0 to turn the message off), "
+            "with no quotes around it."
+        )
+
     return (
         data.get("web_server_port", DEFAULT_PORT),
         data.get("poll_interval_ms", DEFAULT_POLL_INTERVAL_MS),
+        window,
         data["printers"],
     )

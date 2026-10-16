@@ -6,6 +6,8 @@ from datetime import datetime, timedelta, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from config import PROJECT_ROOT, load_config
+from print_errors import describe_print_error
+from print_result import PrintResultTracker
 from printer_status_map import PRINTER_STATUS_MAP
 
 import bambulabs_api as bl
@@ -20,7 +22,7 @@ CLIENT_ROOT = PROJECT_ROOT / "client"
 # PRINTERS: "label" and "camera_url" per printer are safe to expose to the browser (served 
 # via /config.json); "ip", "access_code", and "serial" are not, and never leave this script -- 
 # they're only used server-side to poll the printer's local status feed.
-PORT, POLL_INTERVAL_MS, PRINTERS = load_config()
+PORT, POLL_INTERVAL_MS, RECENT_RESULT_WINDOW_MINUTES, PRINTERS = load_config()
 
 # Settings that apply to the whole site rather than one printer. Everything
 # in here is sent to the browser via /config.json.
@@ -30,6 +32,7 @@ SETTINGS = {
 
 status_lock = threading.Lock()
 latest_status = {name: {"state": "UNKNOWN"} for name in PRINTERS}
+last_error = {}  # per printer, so a changed error code is logged once rather than every poll
 
 class _IgnoreAmsNoise(logging.Filter):
     def filter(self, record):
@@ -37,35 +40,64 @@ class _IgnoreAmsNoise(logging.Filter):
 
 logging.getLogger("bambulabs_api").addFilter(_IgnoreAmsNoise())
 
+def build_status(printer, name, result_tracker):
+    """Reads one snapshot from a connected printer and returns the dict sent to the browser."""
+    percent = printer.get_percentage()
+    remaining_m = printer.get_time()
+    gstate = str(printer.get_state()).split(".")[-1]
+    printer_state = str(printer.get_current_state()).split(".")[-1]
+    print_error = printer.print_error_code()
+
+    if print_error != last_error.get(name, 0):
+        logging.warning("%s: print_error=%08X gcode_state=%s stage=%s",
+                        name, print_error, gstate, printer_state)
+    last_error[name] = print_error
+
+    active = (gstate in ("RUNNING", "PAUSE", "PREPARE")
+              and isinstance(percent, int)
+              and isinstance(remaining_m, int))
+    last_result = result_tracker.update(active, gstate)
+
+    if not active:
+        info = {"state": "IDLE"}
+        if last_result:
+            info["last_result"] = last_result
+        return info
+
+    # The printer reports two separate things: a coarse job state (gcode_state:
+    # RUNNING/PAUSE/...) and a fine-grained stage (stg_cur, which is what
+    # PRINTER_STATUS_MAP translates).  An error such as a jammed extruder pauses the
+    # job but doesn't necessarily change the stage, which can stay "Printing".  So
+    # the job state wins for the display, and print_error carries the actual error.
+    pstate = PRINTER_STATUS_MAP[printer_state]
+    if gstate == "PAUSE" and "Paused" not in pstate:
+        pstate = "Paused"
+
+    eta = datetime.now(timezone.utc) + timedelta(minutes=remaining_m)
+    info = {
+        "state": "RUNNING",
+        "pstate": pstate,
+        "model": printer.subtask_name() or printer.gcode_file() or "Unknown",
+        "percent": percent,
+        "layer": printer.current_layer_num(),
+        "total_layers": printer.total_layer_num(),
+        "remaining_seconds": remaining_m * 60,
+        "eta_utc": eta.strftime("%Y-%m-%dT%H:%M:%SZ"),
+    }
+    if print_error:
+        info["error"] = describe_print_error(print_error)
+    return info
+
+
 def poll_printer(name, cfg):
     printer = None
+    result_tracker = PrintResultTracker(RECENT_RESULT_WINDOW_MINUTES)
     while True:
         try:
             if printer is None:
                 printer = bl.Printer(cfg["ip"], cfg["access_code"], cfg["serial"])
                 printer.connect()
-
-            percent = printer.get_percentage()
-            remaining_m = printer.get_time()
-            gstate = str(printer.get_state()).split(".")[-1]
-            printer_state = str(printer.get_current_state()).split(".")[-1]
-
-            if (gstate not in ("RUNNING", "PAUSE", "PREPARE")
-                    or not isinstance(percent, int)
-                    or not isinstance(remaining_m, int)):
-                info = {"state": "IDLE"}
-            else:
-                eta = datetime.now(timezone.utc) + timedelta(minutes=remaining_m)
-                info = {
-                    "state": "RUNNING",
-                    "pstate": PRINTER_STATUS_MAP[printer_state],
-                    "model": printer.subtask_name() or printer.gcode_file() or "Unknown",
-                    "percent": percent,
-                    "layer": printer.current_layer_num(),
-                    "total_layers": printer.total_layer_num(),
-                    "remaining_seconds": remaining_m * 60,
-                    "eta_utc": eta.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                }
+            info = build_status(printer, name, result_tracker)
         except Exception as e:
             info = {"state": "ERROR", "error": str(e)}
             printer = None  # force a fresh reconnect attempt next loop
@@ -93,6 +125,15 @@ STATIC_FILES = {
 }
 
 
+class WebServer(ThreadingHTTPServer):
+    # How many incoming connections the operating system holds while the server catches up.
+    # Python's default is 5, which is too few: when a handful of visitors connect at the same moment
+    # (a few people opening the page, each page load making several requests), the extras are turned
+    # away and have to retry, and each retry costs a second or more.  128 absorbs a burst like that;
+    # a connection that is merely queued costs next to nothing.
+    request_queue_size = 128
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send_headers(self, content_type):
         self.send_response(200)
@@ -107,7 +148,8 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        path = self.path
+        # Routing ignores any query string, so a shared link like /printers/?utm_source=chat works.
+        path = self.path.split("?", 1)[0]
         if path == "/printers":
             # Redirect to the trailing-slash form instead of serving content here directly,
             # to avoid breaking relative URLs.
@@ -155,4 +197,4 @@ if __name__ == "__main__":
     for name, cfg in PRINTERS.items():
         threading.Thread(target=poll_printer, args=(name, cfg), daemon=True).start()
 
-    ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    WebServer(("0.0.0.0", PORT), Handler).serve_forever()

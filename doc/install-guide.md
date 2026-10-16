@@ -385,6 +385,7 @@ Now we'll build the website itself.  The site is mostly built for you (unless yo
    | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
    | `web_server_port`  | The port the sit will sit on. Change only if desired; the default is fine.                                                     |
    | `poll_interval_ms` | How frequently the web page will update itself from the server.  This is in milliseconds, so 5000 = 5 seconds.  Change to taste. |
+   | `recent_result_window_minutes` | After a print ends, how many minutes the page keeps saying "Idle (Print Succeeded)" or "Idle (Print Failed)" before going back to plain "Idle".  Optional; the default is 30.  Use `0` to turn the message off. |
    | `printers`         | The printers that will be streamed.  One entry per printer.  Add or remove as necessary.                                       |
    | `label`            | A label for the printer, which will be displayed on the page.  Customize it as you want. |
    | `camera_url`       | The URL to the printer's camera that you set up earlier in this document.|

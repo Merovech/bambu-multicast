@@ -1,6 +1,7 @@
 {
   "web_server_port": 8090,
   "poll_interval_ms": 5000,
+  "recent_result_window_minutes": 30,
 
   "printers": {
     "example": {

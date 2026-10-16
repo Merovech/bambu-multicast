@@ -178,7 +178,14 @@ function updateCard(id, info) {
   setHidden(idleEl, !isIdle);
   setHidden(detailEl, isIdle);
   if (isIdle) {
-      return;
+    // The server only sends last_result for a while after a print ends (30 minutes
+    // unless recent_result_window_minutes in config.json says otherwise).
+    const idleText = {
+      succeeded: "Idle (Print Succeeded)",
+      failed: "Idle (Print Failed)",
+    };
+    idleEl.textContent = idleText[info?.last_result] || "Idle";
+    return;
   }
 
   setField(card, "model", info.model || "Unknown");
@@ -240,4 +247,26 @@ async function main() {
   setInterval(refreshStatus, pollIntervalMs);
 }
 
-main();
+// Browsers don't define `module`, so on the real site this just starts the page.  The Jest tests
+// (tests/client/) do define it: they get the functions below instead of a page that starts itself.
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    formatDuration,
+    setField,
+    renderCard,
+    setHidden,
+    updateCard,
+    startCameraStream,
+    cacheBustedCameraUrl,
+    loadConfig,
+    refreshStatus,
+    setPageTitleDate,
+    main,
+    CAMERA_ERROR_RETRY_MS,
+    CAMERA_WATCHDOG_MS,
+    getPollIntervalMs: () => pollIntervalMs,
+    getPrinterIds: () => printerIds,
+  };
+} else {
+  main();
+}
