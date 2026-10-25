@@ -92,6 +92,9 @@ def server(monkeypatch, tmp_path):
     import config
     printers = json.loads(json.dumps(TEST_PRINTERS))
     monkeypatch.setattr(config, "load_config", lambda: (0, 7000, 45, printers))
+    # server.py also reads bind_address from config.json when it is imported.  A fresh checkout (such as the one
+    # GitHub tests) has no config.json, so that read has to be replaced too.
+    monkeypatch.setattr(config, "load_bind_address", lambda: "127.0.0.1")
 
     sys.modules.pop("server", None)
     module = importlib.import_module("server")

@@ -1,0 +1,75 @@
+# Rebuilds doc/install-guide.pdf, in GitHub's visual style, whenever doc/install-guide.md changes
+# on main.  The PDF is committed back to the repository next to the guide, and also attached to the
+# run as a downloadable artifact.
+#
+# What does the work is .github/install-guide-pdf/build.sh (pandoc + the GitHub stylesheet + Chrome).
+# You can also start this by hand from the Actions tab ("Run workflow"), for example to try it out.
+
+name: Install guide PDF
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - doc/install-guide.md
+  workflow_dispatch:
+
+# The job commits the PDF back, which needs write access to the repository's contents.  Nothing else.
+permissions:
+  contents: write
+
+# Two quick pushes shouldn't build at the same time and fight over the commit.
+concurrency:
+  group: install-guide-pdf
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Installs exactly the versions in package-lock.json, including the pinned GitHub stylesheet.
+      - run: npm ci
+
+      # Pinned to the version the build was developed and checked with.  Pandoc reads tables and callouts
+      # a little differently from one version to the next, and Ubuntu's own package is much older.
+      - uses: pandoc/actions/setup@v1
+        with:
+          version: '3.9'
+
+      # Google Chrome is already installed on GitHub's Ubuntu runners.  --no-sandbox is needed because
+      # Ubuntu 24.04 blocks Chrome's own sandbox for non-root users; it is safe here because the only
+      # page Chrome opens is the one built from this repository's own guide.
+      - name: Build the PDF
+        env:
+          CHROME_FLAGS: --no-sandbox
+        run: |
+          pandoc --version | head -1
+          google-chrome --version
+          bash .github/install-guide-pdf/build.sh
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: install-guide-pdf
+          path: doc/install-guide.pdf
+
+      # [skip ci] and the GITHUB_TOKEN both keep this commit from starting another run.  The PDF is listed
+      # in .gitignore (so nobody commits one built on their own machine), hence `git add -f`.
+      - name: Commit the PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f doc/install-guide.pdf
+          if git diff --staged --quiet; then
+            echo "The PDF has not changed; nothing to commit."
+          else
+            git commit -m "Update the install guide PDF [skip ci]"
+            git pull --rebase
+            git push
+          fi

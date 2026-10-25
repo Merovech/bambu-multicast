@@ -1,0 +1,82 @@
+# Runs the whole test suite on every pull request, so a change with failing tests is never merged by accident.
+#
+#   Python:     pytest, on the oldest and the newest Python the project is used with
+#   JavaScript: jest, for the web page
+#
+# The performance tests (`pytest -m perf`, `npm run test:perf`) are not run here: they measure speed, which
+# varies from one shared GitHub machine to the next, and they are meant to be run on the Pi.
+#
+# The last job, "All tests passed", is the single check to require in the repository's branch protection
+# settings (Settings > Branches).  Until it is required there, this workflow can only warn, not block.
+
+name: Tests
+
+on:
+  pull_request:
+
+# Reads the code and nothing else.  No secrets are used, and the job cannot change the repository.
+permissions:
+  contents: read
+
+# A newer push to the same pull request makes the older run pointless.
+concurrency:
+  group: tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python tests (${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 3.11 is what Raspberry Pi OS "Bookworm" ships; 3.14 is what the project is developed on.
+        # bambulabs-api needs 3.10 or newer.
+        python-version: ["3.11", "3.14"]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # The site's own packages plus the test tools (pytest, pytest-benchmark, pyyaml).
+      - run: pip install -r requirements-dev.txt
+
+      # -ra lists why anything was skipped, so a test that silently stops running shows up in the log.
+      - run: python -m pytest -ra
+
+  javascript:
+    name: JavaScript tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # Installs exactly the versions in package-lock.json.
+      - run: npm ci
+
+      - run: npm test
+
+  # One stable check that is green only if every job above is.  Requiring this one in branch protection
+  # means the matrix above can change without the protection rule needing to be edited.
+  tests-passed:
+    name: All tests passed
+    if: always()
+    needs: [python, javascript]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every test job to have succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          for result in $RESULTS; do
+            if [ "$result" != "success" ]; then
+              echo "A test job did not succeed, so this pull request must not be merged."
+              exit 1
+            fi
+          done

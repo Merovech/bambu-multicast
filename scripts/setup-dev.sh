@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-command setup for developers (for example, someone who has just forked or cloned the project).
 #
-# Run it from anywhere:   bash setup-dev.sh
+# Run it from anywhere:   bash scripts/setup-dev.sh
 #
 # It will:
 #   1. check that Python 3.10+, Node 18+ and npm are installed
@@ -16,7 +16,7 @@
 
 set -euo pipefail
 
-cd "$(dirname "${BASH_SOURCE[0]}")"
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
 step() { printf '\n==> %s\n' "$1"; }
 fail() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
@@ -25,7 +25,7 @@ fail() { printf '\nERROR: %s\n' "$1" >&2; exit 1; }
 step "Checking prerequisites"
 
 for file in requirements-dev.txt package-lock.json config/config.example.json; do
-  [ -f "$file" ] || fail "$file is missing. Run this script from the root of the project."
+  [ -f "$file" ] || fail "$file is missing. This script must stay in the scripts/ folder of a complete copy of the project."
 done
 
 # The command for Python varies: python3 on Linux/macOS, python or "py -3" on Windows.

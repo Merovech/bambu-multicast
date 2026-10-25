@@ -7,6 +7,12 @@ pytest.ini export-ignore
 requirements-dev.txt export-ignore
 doc/future-to-do-list.md export-ignore
 *.sh text eol=lf
-setup-dev.sh export-ignore
+scripts/setup-dev.sh export-ignore
+scripts/upload.sh export-ignore
+scripts/venv.sh export-ignore
+scripts/package-release.sh export-ignore
 tailwind.config.js export-ignore
 tailwind.input.css export-ignore
+.github export-ignore
+.claude export-ignore
+doc/release-checklist.md export-ignore
