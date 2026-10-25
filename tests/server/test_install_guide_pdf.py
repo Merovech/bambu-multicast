@@ -101,6 +101,15 @@ class TestTheBuildFiles:
         assert "$body$" in template and "$for(css)$" in template
         assert "size: Letter" in template
 
+    def test_every_page_is_numbered_in_the_bottom_margin(self):
+        template = (BUILD_DIR / "template.html").read_text(encoding="utf-8")
+        assert "@bottom-center" in template
+        assert "counter(page)" in template and "counter(pages)" in template
+
+    def test_the_numbers_are_not_the_chrome_header_and_footer_that_would_add_the_date_and_a_path(self):
+        build = (BUILD_DIR / "build.sh").read_text(encoding="utf-8")
+        assert "--no-pdf-header-footer" in build
+
     def test_the_template_loads_nothing_from_other_sites(self):
         template = (BUILD_DIR / "template.html").read_text(encoding="utf-8")
         assert not re.search(r"(src|href)=\"https?://", template)
