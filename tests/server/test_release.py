@@ -39,6 +39,7 @@ class TestReleaseArchive:
     @pytest.mark.parametrize("path", [
         "tests/", "scripts/package-release.sh", "package.json", "package-lock.json", "tailwind.config.js",
         "tailwind.input.css", "requirements-dev.txt", "scripts/setup-dev.sh", "scripts/upload.sh", "scripts/venv.sh", "pytest.ini",
+        ".claude", "doc/release-checklist.md", "doc/future-to-do-list.md",
     ])
     def test_developer_only_files_stay_out_of_the_zip(self, path):
         assert export_ignored(path), f"{path} would be shipped to end users"
@@ -70,3 +71,18 @@ class TestConfigIsDocumented:
             keys |= set(printer)
         for key in keys:
             assert f"`{key}`" in INSTALL_GUIDE, f"{key} is in config.example.json but not the install guide"
+
+
+class TestToolingFilesAreNotPartOfTheProject:
+    def test_the_claude_folder_is_git_ignored(self):
+        ignored = subprocess.run(["git", "check-ignore", "--no-index", "-q", "--", ".claude/observations/x.log"],
+                                 cwd=PROJECT_ROOT).returncode == 0
+        assert ignored
+
+    def test_nothing_in_the_claude_folder_is_tracked(self):
+        assert git("ls-files", ".claude").strip() == ""
+
+    def test_the_maintainer_checklist_is_still_in_the_repository(self):
+        # Excluded from the zip, but it must stay checked in for maintainers.
+        assert (PROJECT_ROOT / "doc" / "release-checklist.md").is_file()
+        assert git("ls-files", "doc/release-checklist.md").strip() != ""

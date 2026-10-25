@@ -20,3 +20,6 @@ doc/install-guide.pdf
 
 # Output of scripts/package-release.sh
 build/
+
+# Local settings and logs from the Claude Code tooling: not part of the project.
+.claude/

@@ -31,7 +31,7 @@ FORBIDDEN_FILES = [
     "package.json", "package-lock.json", "pytest.ini", "requirements-dev.txt", "setup-dev.sh",
     "scripts/setup-dev.sh", "scripts/upload.sh", "scripts/venv.sh", "scripts/package-release.sh",
     "tailwind.config.js", "tailwind.input.css", ".gitattributes", ".gitignore",
-    "config/config.json", "doc/future-to-do-list.md",
+    "config/config.json", "doc/future-to-do-list.md", "doc/release-checklist.md",
 ]
 FORBIDDEN_FOLDERS = ["tests", ".github", "node_modules", "build", ".claude"]
 

@@ -136,7 +136,7 @@ FORBIDDEN_FILES=(
   package.json package-lock.json pytest.ini requirements-dev.txt setup-dev.sh
   scripts/setup-dev.sh scripts/upload.sh scripts/venv.sh scripts/package-release.sh
   tailwind.config.js tailwind.input.css .gitattributes .gitignore
-  config/config.json doc/future-to-do-list.md
+  config/config.json doc/future-to-do-list.md doc/release-checklist.md
 )
 FORBIDDEN_FOLDERS=(tests .github node_modules build .claude)
 
@@ -186,9 +186,9 @@ fi
 
 BYTES=$(wc -c < "$ZIP" | tr -d ' ')
 if command -v sha256sum >/dev/null 2>&1; then
-  SHA=$(sha256sum "$ZIP" | cut -d ' ' -f 1)
+  SHA=$(sha256sum < "$ZIP" | cut -d ' ' -f 1)
 else
-  SHA=$(shasum -a 256 "$ZIP" | cut -d ' ' -f 1)
+  SHA=$(shasum -a 256 < "$ZIP" | cut -d ' ' -f 1)
 fi
 
 echo "Release zip checked and ready:"

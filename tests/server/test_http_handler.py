@@ -215,3 +215,9 @@ class TestNotFoundIsNeverCached:
 
     def test_found_files_are_still_revalidated_not_forbidden_from_caching(self, get):
         assert get("/app.js")[1]["Cache-Control"] == "no-cache"
+
+
+class TestTheBindAddress:
+    def test_the_server_listens_on_the_address_from_the_config(self, server):
+        # conftest configures "127.0.0.1"; this proves server.py takes it from load_bind_address().
+        assert server.BIND_ADDRESS == "127.0.0.1"

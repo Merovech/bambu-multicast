@@ -14,3 +14,5 @@ scripts/package-release.sh export-ignore
 tailwind.config.js export-ignore
 tailwind.input.css export-ignore
 .github export-ignore
+.claude export-ignore
+doc/release-checklist.md export-ignore
