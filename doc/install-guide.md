@@ -505,9 +505,9 @@ I've also been running it both locally and on a domain for quite a while before 
 - [Bambu Connect Raspberry Pi setup](https://blog.octoeverywhere.com/setup-bambu-connect-for-bambu-lab-3d-printers-on-a-raspberry-pi/)
 - [Bambu Connect Docker/Docker Compose setup](https://blog.octoeverywhere.com/setup-bambu-connect-with-docker-or-docker-compose/) (alternative to the Pi, using your Docker machine instead, if you'd rather not maintain a second physical device)
 - [External/Alternative webcam setup](https://help.octoeverywhere.com/knowledge-base/bambu-lab-3-d-printers/external-alternative-webcam-setup)
-- [go2rtc](https://github.com/AlexxIT/go2rtc) — the local camera relay used in Phase 5 for the P2S
-- [bambu-go2rtc](https://github.com/synman/bambu-go2rtc) — a purpose-built wrapper around go2rtc specifically for Bambu printers, worth a look if you outgrow the plain config in Phase 5 (e.g. wanting the P2S's serial-based access instead of the access-code URL)
-- [bambulabs_api](https://bambutools.github.io/bambulabs_api/) — the Python library used in Phase 6 part B for progress/layer/ETA, talking to each printer's local status feed
+- [go2rtc](https://github.com/AlexxIT/go2rtc) — the local camera relay used in Phase 4 for the P2S
+- [bambu-go2rtc](https://github.com/synman/bambu-go2rtc) — a purpose-built wrapper around go2rtc specifically for Bambu printers, worth a look if you outgrow the plain config in Phase 4 (e.g. wanting the P2S's serial-based access instead of the access-code URL)
+- [bambulabs_api](https://bambutools.github.io/bambulabs_api/) — the Python library used in Phase 5 for progress/layer/ETA, talking to each printer's local status feed
 - [OctoEverywhere API docs](https://docs.octoeverywhere.com/) — no longer needed by this plan, kept only as a pointer in case you want cloud-side data later
 - [OctoEverywhere Live Links](https://octoeverywhere.com/live) — the simpler no-login public link option, one printer per link, not used in this plan's default path
 - [OePi — purpose-built Pi image for Bambu Connect/Klipper Companion](https://github.com/OctoEverywhere/OePi) (worth a look for Phase 1–2 as a possible shortcut over a bare Raspberry Pi OS install)
