@@ -17,6 +17,11 @@ Most of this is enforced by the tests (`pytest` and `npm test`); run both before
 - Validate it in `server/config.py`, with a plain-language error.
 - Add it to `config/config.example.json` and to the table in `doc/install-guide.md`.
 
+## Whenever you change the install guide
+- Pushing a change to `doc/install-guide.md` on `main` rebuilds `doc/install-guide.pdf` in GitHub's style (`.github/workflows/install-guide-pdf.yml`) and commits it. You can run it by hand from the Actions tab, or locally with `bash .github/install-guide-pdf/build.sh` (needs pandoc 3.9 and Chrome; run `npm ci` first).
+- Put a blank line before every table. GitHub draws a table that follows a line of text, but the PDF converter doesn't; a test checks this.
+- If branch protection ever blocks direct pushes to `main`, the workflow can no longer commit the PDF back: give the Actions bot an exception, or change the workflow to open a pull request.
+
 ## Whenever you change dependencies
 - `bambulabs-api`: change the version in `requirements.txt` and `setup.sh` together. Both are pinned with `==`.
 - Dev tooling goes in `requirements-dev.txt` or `package.json`, never in the production files.

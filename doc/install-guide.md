@@ -381,6 +381,7 @@ Now we'll build the website itself.  The site is mostly built for you (unless yo
     cp ./config/config.example.json ./config/config.json
     ```
 4. Modify `config/config.json` using `nano ./config/config.json`.  See the table below for the description fields and the changes needed for each.
+
    | Field              | Description                                                                                                                    |
    | ------------------ | ------------------------------------------------------------------------------------------------------------------------------ |
    | `web_server_port`  | The port the sit will sit on. Change only if desired; the default is fine.                                                     |

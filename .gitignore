@@ -9,6 +9,7 @@ venv
 *.sh
 !setup.sh
 !setup-dev.sh
+!.github/install-guide-pdf/build.sh
 
 # Non-example configs
 config/config.json
