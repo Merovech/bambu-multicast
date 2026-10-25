@@ -497,6 +497,7 @@ I've also been running it both locally and on a domain for quite a while before 
 | ----------- | ------------------------ |
 | 29 Sep 2026 | Initial draft completed. |
 | 05 Oct 2026 | Proofreading pass, resulting in sections being rewritten for clarity. |
+| 25 Oct 2026 | Corrected the phase numbers in the reference links. |
 
 ---
 
