@@ -13,7 +13,11 @@ $highlighting-css$
 <style>
 /* The GitHub look comes from github-markdown-css, applied through the .markdown-body wrapper below.
    Everything here only adapts it from a web page to a printed page. */
-@page { size: Letter; margin: 0.6in 0.65in; }
+@page {
+  size: Letter; margin: 0.6in 0.65in 0.75in;
+  /* Page numbers: Chrome draws the margin boxes itself, so no header or footer option is needed. */
+  @bottom-center { content: "Page " counter(page) " of " counter(pages); font: 10px/1 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; color: #59636e; }
+}
 html, body { margin: 0; background: #fff; }
 * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .markdown-body { max-width: none; padding: 0; font-size: 13px; }
