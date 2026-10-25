@@ -74,7 +74,7 @@ class TestWhatItMayDo:
 
     def test_commits_only_the_pdf_and_cannot_retrigger_itself(self, workflow):
         commit = next(s["run"] for s in steps(workflow) if "git commit" in s.get("run", ""))
-        assert "git add doc/install-guide.pdf" in commit
+        assert re.search(r"git add (-f )?doc/install-guide\.pdf\b", commit)
         assert "[skip ci]" in commit
         assert "git add ." not in commit and "git add -A" not in commit
 
@@ -175,3 +175,24 @@ class TestTheGuideIsWrittenForTheConverter:
             if previous and not previous.startswith("#") and not previous.startswith("|"):
                 bad.append(f"line {n + 1}: {previous[:50]!r}")
         assert not bad, "put a blank line before the table at: " + "; ".join(bad)
+
+
+class TestThePdfIsOnlyEverCommittedByTheAction:
+    def ignored(self, path):
+        return subprocess.run(["git", "check-ignore", "--no-index", "-q", "--", path],
+                              cwd=PROJECT_ROOT).returncode == 0
+
+    def test_the_pdf_is_git_ignored_so_a_hand_built_one_is_never_committed(self):
+        assert self.ignored("doc/install-guide.pdf")
+
+    def test_the_workflow_force_adds_it_anyway(self, workflow):
+        # Without -f, git refuses to add an ignored file and the commit step would fail.
+        commit = next(s["run"] for s in steps(workflow) if "git commit" in s.get("run", ""))
+        assert "git add -f doc/install-guide.pdf" in commit
+
+    def test_the_build_script_can_write_elsewhere_for_local_previews(self):
+        script = (BUILD_DIR / "build.sh").read_text(encoding="utf-8")
+        assert "OUTPUT=${OUTPUT:-doc/install-guide.pdf}" in script
+
+    def test_other_pdfs_are_not_ignored(self):
+        assert not self.ignored("doc/something-else.pdf")

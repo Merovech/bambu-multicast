@@ -15,6 +15,11 @@
 #   PANDOC        the pandoc command            (default: pandoc)
 #   CHROME        the Chrome/Chromium command   (default: google-chrome)
 #   CHROME_FLAGS  extra Chrome flags            (the workflow passes --no-sandbox)
+#   OUTPUT        where to write the PDF, relative to the project root (default: doc/install-guide.pdf)
+#
+# doc/install-guide.pdf is the copy the GitHub Action commits, and it is git-ignored so that nobody commits
+# one built by hand.  To try the build on your own machine without touching it, write somewhere else:
+#   OUTPUT=build/install-guide.pdf bash .github/install-guide-pdf/build.sh
 
 set -euo pipefail
 
@@ -24,7 +29,7 @@ PANDOC=${PANDOC:-pandoc}
 CHROME=${CHROME:-google-chrome}
 
 SOURCE=doc/install-guide.md
-OUTPUT=doc/install-guide.pdf
+OUTPUT=${OUTPUT:-doc/install-guide.pdf}
 CSS=node_modules/github-markdown-css/github-markdown.css
 TEMPLATE=.github/install-guide-pdf/template.html
 FILTER=.github/install-guide-pdf/github-alerts.lua
@@ -64,6 +69,7 @@ else
   OUTPUT_ABS="$PWD/$OUTPUT"
 fi
 
+mkdir -p "$(dirname "$OUTPUT")"
 rm -f "$OUTPUT"
 # CHROME_FLAGS is deliberately unquoted so that several flags split into separate arguments.
 # shellcheck disable=SC2086

@@ -30,15 +30,15 @@ def export_ignored(path):
 class TestReleaseArchive:
     @pytest.mark.parametrize("path", [
         "client/index.html", "client/app.js", "client/styles.css", "client/tailwind.css",
-        "server/server.py", "config/config.example.json", "requirements.txt", "setup.sh",
+        "server/server.py", "config/config.example.json", "requirements.txt", "scripts/setup.sh",
     ])
     def test_files_the_site_needs_are_in_the_zip(self, path):
         assert (PROJECT_ROOT / path).is_file()
         assert not export_ignored(path), f"{path} would be left out of the release zip"
 
     @pytest.mark.parametrize("path", [
-        "tests/", "package.json", "package-lock.json", "tailwind.config.js",
-        "tailwind.input.css", "requirements-dev.txt", "setup-dev.sh", "pytest.ini",
+        "tests/", "scripts/package-release.sh", "package.json", "package-lock.json", "tailwind.config.js",
+        "tailwind.input.css", "requirements-dev.txt", "scripts/setup-dev.sh", "scripts/upload.sh", "scripts/venv.sh", "pytest.ini",
     ])
     def test_developer_only_files_stay_out_of_the_zip(self, path):
         assert export_ignored(path), f"{path} would be shipped to end users"

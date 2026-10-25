@@ -5,12 +5,6 @@ venv
 **/__pycache__
 .pytest_cache
 
-# Personal scripts
-*.sh
-!setup.sh
-!setup-dev.sh
-!.github/install-guide-pdf/build.sh
-
 # Non-example configs
 config/config.json
 
@@ -19,3 +13,10 @@ config/config.json
 
 # JavaScript test tooling
 node_modules
+
+# The install guide PDF is built and committed only by the GitHub Action (.github/workflows/install-guide-pdf.yml),
+# which adds it with `git add -f`.  Ignoring it here stops a PDF built on your own machine being committed.
+doc/install-guide.pdf
+
+# Output of scripts/package-release.sh
+build/

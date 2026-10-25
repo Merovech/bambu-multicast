@@ -395,15 +395,15 @@ Now we'll build the website itself.  The site is mostly built for you (unless yo
    | `access_code`      | The access code for the printer that you wrote down at the beginning of this process. |
    | `serial`           | The serial number of the printer that you wrote down earlier in this process. |
 
-5. Go to the root of your site folder and make `setup.sh` folder executable, then run it.
+5. Go to the root of your site folder and make `scripts/setup.sh` executable, then run it.
    ```
-   chmod +x setup.sh
-   ./setup.sh
+   chmod +x scripts/setup.sh
+   ./scripts/setup.sh
    ```
 
    This will set up a virtual environment, run it, and install the bambulabs_api prerequisite.  Your prompt will now show `(venv)` before it.  You can type `deactivate` to exit the virtual environment, and `source venv/bin/activate` to come back.  However, you must be in the virtual environment when you run this manually.
 
-   You can now delete `setup.sh`, and for safety you probably should.
+   You can now delete `scripts/setup.sh`, and for safety you probably should.
 
 6. Test it by hand.  You must be in the virtual environment when you do this (see previous step).
    ```bash

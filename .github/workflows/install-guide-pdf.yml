@@ -59,12 +59,13 @@ jobs:
           name: install-guide-pdf
           path: doc/install-guide.pdf
 
-      # [skip ci] and the GITHUB_TOKEN both keep this commit from starting another run.
+      # [skip ci] and the GITHUB_TOKEN both keep this commit from starting another run.  The PDF is listed
+      # in .gitignore (so nobody commits one built on their own machine), hence `git add -f`.
       - name: Commit the PDF
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add doc/install-guide.pdf
+          git add -f doc/install-guide.pdf
           if git diff --staged --quiet; then
             echo "The PDF has not changed; nothing to commit."
           else
