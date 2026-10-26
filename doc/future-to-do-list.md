@@ -18,8 +18,9 @@ Added 2026-10-16.
 - [ ] **2. GitHub: set up branch security**
   - Protect `main`. Decide the rules (for example: require a pull request, require the test checks to
     pass, block force-pushes).
-  - Check this against item 3: a workflow that commits a PDF back to `main` will be rejected if direct
-    pushes are blocked. It would need an exception for the Actions bot, or to open its own pull request.
+  - Check this against item 3: a workflow that commits a PDF back to `main` is rejected if direct
+    pushes are blocked. Settled: the PDF workflow pushes with the secret `PDF_PUSH_TOKEN`, a personal
+    access token of a repository admin, who may bypass the rule (see `doc/release-checklist.md`).
 
 - [ ] **3. GitHub Actions: run tests on PR, convert install instructions to PDF**
   - **Run the tests on every pull request:** `pytest` (Python) and `npm test` (Jest). Consider making

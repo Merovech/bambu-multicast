@@ -21,7 +21,10 @@ Most of this is enforced by the tests (`pytest` and `npm test`); run both before
 - Pushing a change to `doc/install-guide.md` on `main` rebuilds `doc/install-guide.pdf` in GitHub's style (`.github/workflows/install-guide-pdf.yml`) and commits it. You can run it by hand from the Actions tab, or locally with `bash .github/install-guide-pdf/build.sh` (needs pandoc 3.9 and Chrome; run `npm ci` first).
 - `doc/install-guide.pdf` is git-ignored on purpose: only the workflow commits it (with `git add -f`). To try the build yourself without touching it, write elsewhere: `OUTPUT=build/install-guide.pdf bash .github/install-guide-pdf/build.sh`. (Once the bot has committed the PDF, git tracks it and no longer ignores edits to it, so a rebuild in place would show as modified; restore it with `git checkout -- doc/install-guide.pdf`.)
 - Put a blank line before every table. GitHub draws a table that follows a line of text, but the PDF converter doesn't; a test checks this.
-- If branch protection ever blocks direct pushes to `main`, the workflow can no longer commit the PDF back: give the Actions bot an exception, or change the workflow to open a pull request.
+- `main` requires a pull request, which the built-in Actions token cannot get past. The workflow therefore pushes the PDF with a personal access token of a repository admin (admins may bypass the rule), stored as the repository secret `PDF_PUSH_TOKEN`. If the secret is missing or the token has expired, the workflow fails on its first step, or at the push, and no PDF is committed.
+  - Create it: GitHub > Settings > Developer settings > Personal access tokens > Fine-grained tokens > Generate new token. Resource owner: you. Repository access: only `Merovech/bambu-multicast`. Permission: Repository permissions > Contents: Read and write (nothing else). Set an expiry (a year is reasonable) and put the renewal date in your calendar.
+  - Store it: repository Settings > Secrets and variables > Actions > New repository secret, name `PDF_PUSH_TOKEN`.
+  - Renew it before it expires by replacing the secret's value. Revoke it at once if it ever leaks.
 
 ## Whenever you change dependencies
 - `bambulabs-api`: change the version in `requirements.txt` and `scripts/setup.sh` together. Both are pinned with `==`.

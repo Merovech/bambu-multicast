@@ -53,8 +53,24 @@ class TestWhenItRuns:
 
 
 class TestWhatItMayDo:
-    def test_only_has_permission_to_write_repository_contents(self, workflow):
-        assert workflow["permissions"] == {"contents": "write"}
+    def test_the_built_in_token_can_only_read(self, workflow):
+        # Pushing to `main` is done with PDF_PUSH_TOKEN; the built-in token never needs more than this.
+        assert workflow["permissions"] == {"contents": "read"}
+
+    def test_pushes_with_the_admin_token_because_main_requires_a_pull_request(self, workflow):
+        checkout = next(s for s in steps(workflow) if str(s.get("uses", "")).startswith("actions/checkout"))
+        assert checkout["with"]["token"] == "${{ secrets.PDF_PUSH_TOKEN }}"
+
+    def test_stops_with_a_clear_message_before_building_if_the_token_is_not_set(self, workflow):
+        first = steps(workflow)[0]
+        assert "uses" not in first, "the token check has to come before the checkout"
+        assert first["env"]["PDF_PUSH_TOKEN"] == "${{ secrets.PDF_PUSH_TOKEN }}"
+        assert '[ -z "$PDF_PUSH_TOKEN" ]' in first["run"] and "exit 1" in first["run"]
+
+    def test_the_token_is_only_ever_read_from_the_secret_never_written_in_the_file(self):
+        text = WORKFLOW.read_text(encoding="utf-8")
+        assert not re.search(r"(ghp_|github_pat_)[A-Za-z0-9_]{10,}", text)
+        assert set(re.findall(r"secrets\.(\w+)", text)) == {"PDF_PUSH_TOKEN"}
 
     def test_every_action_it_uses_is_pinned_to_a_version(self, workflow):
         used = [s["uses"] for s in steps(workflow) if "uses" in s]

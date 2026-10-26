@@ -2,6 +2,11 @@
 # on main.  The PDF is committed back to the repository next to the guide, and also attached to the
 # run as a downloadable artifact.
 #
+# `main` requires a pull request, and the built-in GITHUB_TOKEN cannot get past that rule.  So the commit
+# is pushed with a personal access token of a repository admin, kept in the repository secret
+# PDF_PUSH_TOKEN (see doc/release-checklist.md for how to create and renew it).  The push then counts as
+# coming from that admin, who is allowed to bypass the rule.
+#
 # What does the work is .github/install-guide-pdf/build.sh (pandoc + the GitHub stylesheet + Chrome).
 # You can also start this by hand from the Actions tab ("Run workflow"), for example to try it out.
 
@@ -14,9 +19,9 @@ on:
       - doc/install-guide.md
   workflow_dispatch:
 
-# The job commits the PDF back, which needs write access to the repository's contents.  Nothing else.
+# The built-in token only reads the repository; the push uses PDF_PUSH_TOKEN instead.
 permissions:
-  contents: write
+  contents: read
 
 # Two quick pushes shouldn't build at the same time and fight over the commit.
 concurrency:
@@ -27,7 +32,20 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      # Fail at once, with the reason, instead of building a PDF that cannot be committed.
+      - name: Check that the push token is set
+        env:
+          PDF_PUSH_TOKEN: ${{ secrets.PDF_PUSH_TOKEN }}
+        run: |
+          if [ -z "$PDF_PUSH_TOKEN" ]; then
+            echo "::error::The repository secret PDF_PUSH_TOKEN is missing or empty, so the PDF cannot be pushed to main. See doc/release-checklist.md."
+            exit 1
+          fi
+
+      # Checking out with the token stores it for the `git push` below.
       - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PDF_PUSH_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -59,8 +77,9 @@ jobs:
           name: install-guide-pdf
           path: doc/install-guide.pdf
 
-      # [skip ci] and the GITHUB_TOKEN both keep this commit from starting another run.  The PDF is listed
-      # in .gitignore (so nobody commits one built on their own machine), hence `git add -f`.
+      # [skip ci] keeps this commit from starting other runs (a push made with a personal access token, unlike
+      # one made with GITHUB_TOKEN, does start them), and this workflow only watches the guide, not the PDF.
+      # The PDF is listed in .gitignore (so nobody commits one built on their own machine), hence `git add -f`.
       - name: Commit the PDF
         run: |
           git config user.name "github-actions[bot]"
