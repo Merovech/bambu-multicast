@@ -25,7 +25,7 @@ REQUIRED = [
     "server/print_result.py", "server/printer_status_map.py",
     "client/index.html", "client/app.js", "client/styles.css", "client/tailwind.css",
     "config/config.example.json", "scripts/setup.sh", "requirements.txt", "LICENSE", "THIRD_PARTY_NOTICES.md",
-    "doc/install-guide.md", "doc/architecture.md",
+    "doc/install-guide.md",
 ]
 FORBIDDEN_FILES = [
     "package.json", "package-lock.json", "pytest.ini", "requirements-dev.txt", "setup-dev.sh",

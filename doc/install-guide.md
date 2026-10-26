@@ -4,7 +4,6 @@
 <summary>Table of Contents</summary>
 
 - [Bambu Multicast Setup Guide](#bambu-multicast-setup-guide)
-  - [Architecture](#architecture)
   - [Supported printers](#supported-printers)
   - [Requirements](#requirements)
     - [Hardware](#hardware)
@@ -38,9 +37,6 @@ In fact, you can go through this guide and deploy without ever opening any file 
 > This document covers installing BM on a Raspberry Pi, and all commands assume the bash shell.  However, any Linux-based machine will do.  Windows is currently not supported, though it may be in the future.
 >
 > If you're of a more technical bent, I'm sure this could probably be installed on Windows using WSL, but I haven't tried it yet.
-
-##  <a name='Architecture'></a>Architecture
-If you happen to be curious about the architecture of BM -- both hardware and software -- see [architecture.md](architecture.md), in this folder.
 
 ##  <a name='Supportedprinters'></a>Supported printers
 
@@ -498,6 +494,7 @@ I've also been running it both locally and on a domain for quite a while before 
 | 29 Sep 2026 | Initial draft completed. |
 | 05 Oct 2026 | Proofreading pass, resulting in sections being rewritten for clarity. |
 | 25 Oct 2026 | Corrected the phase numbers in the reference links. |
+| 25 Oct 2026 | Removed the Architecture section; the architecture document is no longer included. |
 
 ---
 

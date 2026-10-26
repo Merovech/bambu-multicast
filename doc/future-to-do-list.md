@@ -46,7 +46,7 @@ Added 2026-10-16.
 
 - [ ] **5. README.md**
   - The repository has none yet. Cover what the project is, a screenshot, a quick start that points to
-    `doc/install-guide.md`, and the license. Link the architecture doc.
+    `doc/install-guide.md`, and the license.
   - Should mention the third-party notices (`THIRD_PARTY_NOTICES.md`) and that the site is view-only.
   - If item 4 happens, the README is also where the "trusted users only" warning belongs.
 
