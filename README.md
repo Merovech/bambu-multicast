@@ -9,7 +9,7 @@ My primary goal is simplicity.  The page is deliberately minimalist -- I want to
 
 (Ok, yes: also CSS isn't my strong suit, so that contributed to the minimalist look of the page.)
 
-My secondary goal is security and privacy.  The page is view-only: it shows what your printers are doing but cannot control them, it has no accounts, it collects no personal or printer information, and it sends no printer information (beyond what you can see) to anyone (except the web page itself, of course).  I have tried to make it as solid as possible with security reviews, code reviews, and all the checks I can think of to make it as safe as possible to use.
+My secondary goal is security and privacy.  The page is view-only: it shows what your printers are doing but cannot control them, it has no accounts, it collects no personal or printer information, and it sends no printer information (beyond what you can see) to anyone (except the web page itself, of course).  I have tried to make it as safe and solid as possible with security reviews, code reviews, and all the checks I can think of.
 
 This project was developed because I wanted it and thought it was nifty enough that others might want it too.  I use it every day, hosted on my local network.
 
