@@ -31,6 +31,14 @@ class TestWhenItRuns:
     def test_runs_on_every_pull_request(self):
         assert "pull_request" in triggers()
 
+    def test_runs_again_on_every_merge_to_main_so_the_badge_describes_main(self):
+        push = triggers()["push"]
+        assert push["branches"] == ["main"]
+        assert "paths" not in push and "paths-ignore" not in push, "a merge must not dodge the tests by its paths"
+
+    def test_runs_on_nothing_else(self):
+        assert set(triggers()) == {"pull_request", "push"}
+
     def test_never_uses_pull_request_target(self):
         # That trigger runs with the base repository's permissions on code from a fork.
         assert "pull_request_target" not in triggers()
@@ -42,6 +50,12 @@ class TestWhenItRuns:
 
     def test_a_newer_push_replaces_the_older_run(self):
         assert DATA["concurrency"]["cancel-in-progress"] is True
+
+    def test_one_merge_never_cancels_the_tests_of_another(self):
+        # A push has no pull request number; without a per-commit fallback every merge would share one group.
+        group = DATA["concurrency"]["group"]
+        assert "github.event.pull_request.number" in group
+        assert "github.sha" in group
 
 
 class TestWhatItMayDo:
