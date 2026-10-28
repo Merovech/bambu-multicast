@@ -1,4 +1,5 @@
-# Runs the whole test suite on every pull request, so a change with failing tests is never merged by accident.
+# Runs the whole test suite on every pull request, so a change with failing tests is never merged by accident,
+# and again on every push to main (a merge), so the status badge in the README describes main itself.
 #
 #   Python:     pytest, on the oldest and the newest Python the project is used with
 #   JavaScript: jest, for the web page
@@ -13,14 +14,17 @@ name: Tests
 
 on:
   pull_request:
+  push:
+    branches: [main]
 
 # Reads the code and nothing else.  No secrets are used, and the job cannot change the repository.
 permissions:
   contents: read
 
-# A newer push to the same pull request makes the older run pointless.
+# A newer push to the same pull request makes the older run pointless.  A push to main has no pull request
+# number, so it is grouped by its own commit: every merge gets its tests run and none cancels another.
 concurrency:
-  group: tests-${{ github.event.pull_request.number }}
+  group: tests-${{ github.event.pull_request.number || github.sha }}
   cancel-in-progress: true
 
 jobs:
