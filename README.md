@@ -44,7 +44,7 @@ A major goal of this project was to allow non-technical people to set it up as e
 
 In other words, if you follow the guide, you can have no idea what the code actually does or how to read it, and it will still work.
 
-The packaged site, ready to install, will be published on the [Releases page](https://github.com/Merovech/bambu-multicast/releases); there is no release yet. [ARI NOTE: This will be removed and turned into a link to the release when 1.0 goes out.]
+You can find the latest release on the  [Releases page](https://github.com/Merovech/bambu-multicast/releases).
 
 ## Contributing
 
