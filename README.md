@@ -13,11 +13,11 @@ My secondary goal is security and privacy.  The page is view-only: it shows what
 
 This project was developed because I wanted it and thought it was nifty enough that others might want it too.  I use it every day, hosted on my local network.
 
-> [!NOTE]
-> I am not affiliated with Bambu Labs in any way; I just own two of their printers and other options I found didn't really meet my needs.  Bambu Labs have neither endorsed nor contributed to this, and they're probably finding out about it at the same time you are.
-
 Here's a screenshot of it in action:
 ![alt text](image.png)
+
+> [!NOTE]
+> I am not affiliated with Bambu Labs in any way; I just own two of their printers and other options I found didn't really meet my needs.  Bambu Labs have neither endorsed nor contributed to this, and they're probably finding out about it at the same time you are.
 
 
 ## How it works
