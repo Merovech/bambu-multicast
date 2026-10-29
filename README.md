@@ -16,6 +16,10 @@ This project was developed because I wanted it and thought it was nifty enough t
 > [!NOTE]
 > I am not affiliated with Bambu Labs in any way; I just own two of their printers and other options I found didn't really meet my needs.  Bambu Labs have neither endorsed nor contributed to this, and they're probably finding out about it at the same time you are.
 
+Here's a screenshot of it in action:
+![alt text](image.png)
+
+
 ## How it works
 
 Think of it as three small helpers working together on one computer:
